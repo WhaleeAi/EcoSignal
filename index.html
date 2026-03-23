@@ -1,0 +1,72 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EcoSignal | Главная</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@300;400;600&family=Roboto+Slab:wght@300;400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="landing-page">
+  <header class="site-header">
+    <nav class="navbar container">
+      <a class="logo" href="index.html">
+        <img class="logo-image" src="icons/Group.svg" alt="EcoSignal" />
+        EcoSignal
+      </a>
+      <ul class="nav-links">
+        <li><a href="#contacts">Контакты</a></li>
+        <li><a href="#about">О проекте</a></li>
+      </ul>
+      <div class="nav-actions">
+        <a class="btn btn-login" href="register.html">Войти</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="landing-main">
+    <div class="hero-wrap">
+      <section class="hero container">
+        <div class="hero-copy">
+          <h1><span class="hero-first-line">Увидели экологическую</span><br />проблему?</h1>
+          <p class="hero-subtitle">Подайте сигнал</p>
+          <a class="btn btn-report" href="register.html">Сообщить о проблеме</a>
+        </div>
+
+        <div class="hero-visual" aria-hidden="true">
+          <div id="treeScene">
+            <div id="previewHack"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section id="about" class="about container">
+      <h2>О проекте</h2>
+      <p>
+        EcoSignal помогает жителям быстро передавать сигналы о нарушениях состояния природных объектов
+        и сокращает путь обращения до ответственных органов.
+      </p>
+    </section>
+  </main>
+
+  <footer id="contacts" class="site-footer">
+    <div class="container footer-content">
+      <p>EcoSignal</p>
+      <p>info@ecosignal.local</p>
+    </div>
+  </footer>
+  <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js" crossorigin="anonymous"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.154.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.154.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="tree-hero.js"></script>
+</body>
+</html>

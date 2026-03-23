@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EcoSignal | Регистрация</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@300;400;600&family=Roboto+Slab:wght@300;400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="register-page">
+  <header class="site-header">
+    <nav class="navbar container">
+      <a class="logo" href="index.html">
+        <img class="logo-image" src="icons/Group.svg" alt="EcoSignal" />
+        EcoSignal
+      </a>
+      <ul class="nav-links">
+        <li><a href="index.html#contacts">Контакты</a></li>
+        <li><a href="index.html#about">О проекте</a></li>
+      </ul>
+      <div class="nav-actions">
+        <a class="btn btn-login" href="register.html">Войти</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="register-main">
+    <section class="register-layout">
+      <section class="register-left">
+        <div class="register-inner">
+          <h1 class="register-title">Регистрация</h1>
+
+          <div class="register-card">
+            <form class="register-form">
+              <input id="fullname" name="fullname" type="text" placeholder="ФИО" />
+              <input id="email" name="email" type="email" placeholder="Введите email" />
+              <input id="password" name="password" type="password" placeholder="Создайте пароль" />
+              <div class="role-dropdown" data-dropdown>
+                <input type="hidden" id="role" name="role" value="" />
+                <button class="role-trigger" type="button" data-trigger aria-haspopup="listbox" aria-expanded="false">
+                  <span data-label>Выберите роль</span>
+                  <span class="role-caret" aria-hidden="true"></span>
+                </button>
+                <div class="role-menu" data-menu role="listbox">
+                  <button type="button" class="role-option" data-value="citizen">Гражданин</button>
+                  <button type="button" class="role-option" data-value="authority">Орган надзора</button>
+                  <button type="button" class="role-option" data-value="admin">Администратор</button>
+                </div>
+              </div>
+              <button type="submit" class="submit-btn">Продолжить</button>
+            </form>
+
+            <p class="register-note">Нажимая «Продолжить», вы принимаете условия использования сервиса EcoSignal.</p>
+          </div>
+        </div>
+      </section>
+
+      <aside class="register-right">
+        <img class="register-illustration" src="imgs/reg_illustration.png" alt="Иллюстрация регистрации" />
+      </aside>
+    </section>
+  </main>
+  <script>
+    (() => {
+      const dropdown = document.querySelector("[data-dropdown]");
+      if (!dropdown) return;
+
+      const trigger = dropdown.querySelector("[data-trigger]");
+      const menu = dropdown.querySelector("[data-menu]");
+      const label = dropdown.querySelector("[data-label]");
+      const hidden = dropdown.querySelector("input[type='hidden']");
+      const options = dropdown.querySelectorAll(".role-option");
+
+      const close = () => {
+        dropdown.classList.remove("open");
+        trigger.setAttribute("aria-expanded", "false");
+      };
+
+      const open = () => {
+        dropdown.classList.add("open");
+        trigger.setAttribute("aria-expanded", "true");
+      };
+
+      trigger.addEventListener("click", () => {
+        dropdown.classList.contains("open") ? close() : open();
+      });
+
+      options.forEach((option) => {
+        option.addEventListener("click", () => {
+          hidden.value = option.dataset.value || "";
+          label.textContent = option.textContent || "Выберите роль";
+          close();
+        });
+      });
+
+      document.addEventListener("click", (event) => {
+        if (!dropdown.contains(event.target)) close();
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") close();
+      });
+    })();
+  </script>
+</body>
+</html>
