@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ru">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>EcoSignal | Вход</title>
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@300;400;600&family=Roboto+Slab:wght@300;400&display=swap"
+			rel="stylesheet"
+		/>
+		<link rel="stylesheet" href="styles.css" />
+	</head>
+	<body class="register-page">
+		<header class="site-header">
+			<nav class="navbar container">
+				<a class="logo" href="index.html">
+					<img class="logo-image" src="icons/Group.svg" alt="EcoSignal" />
+					EcoSignal
+				</a>
+				<ul class="nav-links">
+					<li><a href="index.html#contacts">Контакты</a></li>
+					<li><a href="index.html#about">О проекте</a></li>
+				</ul>
+				<div class="nav-actions">
+					<a class="btn btn-login" href="register.html">Регистрация</a>
+				</div>
+			</nav>
+		</header>
+
+		<main class="register-main">
+			<section class="register-layout">
+				<section class="register-left">
+					<div class="register-inner">
+						<h1 class="register-title">Вход</h1>
+
+						<div class="register-card">
+							<form id="loginForm" class="register-form">
+								<input
+									id="email"
+									name="email"
+									type="email"
+									placeholder="Введите email"
+								/>
+								<input
+									id="password"
+									name="password"
+									type="password"
+									placeholder="Введите пароль"
+								/>
+								<button type="submit" class="submit-btn">Войти</button>
+							</form>
+
+							<p id="message"></p>
+						</div>
+					</div>
+				</section>
+
+				<aside class="register-right">
+					<img
+						class="register-illustration"
+						src="imgs/reg_illustration.png"
+						alt="Иллюстрация входа"
+					/>
+				</aside>
+			</section>
+		</main>
+
+		<script>
+			document
+				.getElementById('loginForm')
+				.addEventListener('submit', async event => {
+					event.preventDefault()
+
+					const email = document.getElementById('email').value.trim()
+					const password = document.getElementById('password').value.trim()
+					const messageEl = document.getElementById('message')
+
+					try {
+						const response = await fetch('/backend/login.php', {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+							},
+							body: JSON.stringify({ email, password }),
+						})
+
+						const data = await response.json()
+
+						if (!response.ok) {
+							messageEl.textContent = data.message || 'Ошибка входа'
+							return
+						}
+
+						localStorage.setItem('token', data.token)
+						localStorage.setItem('user', JSON.stringify(data.user))
+
+						messageEl.textContent = data.message
+
+						setTimeout(() => {
+							window.location.href = 'index.html'
+						}, 1000)
+					} catch (error) {
+						messageEl.textContent = 'Ошибка соединения с сервером'
+					}
+				})
+		</script>
+	</body>
+</html>
