@@ -1,0 +1,135 @@
+﻿<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EcoSignal | Карта</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@300;400;500;600&family=Roboto+Slab:wght@300;400&family=Roboto+Serif:wght@400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="map.css" />
+  </head>
+  <body>
+    <div class="map-page">
+      <aside class="sidebar" aria-label="Навигация">
+        <button class="sidebar-icon first" type="button" aria-label="Панель">
+          <img src="./icons/aside-slider.svg" alt="Home" class="sidebar-icon">
+        </button>
+        <button class="sidebar-icon" type="button" aria-label="Главная">
+          <img src="./icons/Home.svg" alt="Home" class="sidebar-icon">
+        </button>
+        <button class="sidebar-icon" type="button" aria-label="Сигналы">
+          <img src="./icons/my_appeals.svg" alt="Home" class="sidebar-icon">
+        </button>
+
+        <div class="sidebar-spacer"></div>
+        <div class="sidebar-avatar" aria-hidden="true"></div>
+      </aside>
+
+      <main class="content">
+        <section class="map-card">
+          <h1 class="map-title">Ближайшие сигналы: 14</h1>
+          <div class="map-placeholder" aria-label="Карта">
+            <div id="yandexMap" class="map-canvas"></div>
+            <button
+              id="mapCloseBtn"
+              class="map-action-btn map-close-btn"
+              type="button"
+              aria-label="Сбросить выбранную точку"
+              hidden
+            >
+              <img src="./icons/close.svg" alt="" />
+            </button>
+            <button
+              id="mapAddPinBtn"
+              class="map-addpin-btn"
+              type="button"
+              aria-label="Добавить заявку"
+              hidden
+            >
+              <img src="./icons/add_pin.svg" alt="" />
+            </button>
+          </div>
+        </section>
+
+        <section class="right-column">
+          <div class="search-card">
+            <label class="search-input-wrap">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="11" cy="11" r="6"></circle>
+                <line x1="15.5" y1="15.5" x2="20" y2="20"></line>
+              </svg>
+              <input type="text" placeholder="Ищите по проблеме/месту" />
+            </label>
+
+            <div id="appealFormWrap" class="appeal-form-wrap" hidden>
+              <h2 class="appeal-form-title">Новая заявка</h2>
+              <form id="appealForm" class="appeal-form">
+                <label class="appeal-label">
+                  Категория
+                  <select id="appealCategory" required>
+                    <option value="">Выберите категорию</option>
+                  </select>
+                </label>
+
+                <label class="appeal-label">
+                  Подкатегория
+                  <select id="appealSubcategory">
+                    <option value="">Без подкатегории</option>
+                  </select>
+                </label>
+
+                <label class="appeal-label">
+                  Описание
+                  <textarea
+                    id="appealDescription"
+                    rows="4"
+                    placeholder="Опишите проблему"
+                    required
+                  ></textarea>
+                </label>
+
+                <label class="appeal-label">
+                  Приоритет (0-5)
+                  <input
+                    id="appealPriority"
+                    type="number"
+                    min="0"
+                    max="5"
+                    value="0"
+                  />
+                </label>
+
+                <label class="appeal-label">
+                  Фото
+                  <input
+                    id="appealImages"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                  />
+                </label>
+
+                <div class="appeal-coords">
+                  Точка: <span id="appealCoords">не выбрана</span>
+                </div>
+
+                <button class="appeal-submit-btn" type="submit">
+                  Отправить заявку
+                </button>
+                <p id="appealFormMessage" class="appeal-form-message"></p>
+              </form>
+            </div>
+          </div>
+
+          <button class="report-btn" type="button">Сообщить о проблеме</button>
+        </section>
+      </main>
+    </div>
+    <script src="https://api-maps.yandex.ru/2.1/?apikey=c4b88e0d-3370-4eee-b2cd-7bb4ad66c4af&lang=ru_RU"></script>
+    <script src="map.js"></script>
+  </body>
+</html>

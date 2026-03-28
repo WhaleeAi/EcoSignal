@@ -16,10 +16,18 @@ CREATE TABLE categories (
     name VARCHAR(100) NOT NULL UNIQUE
 );
 
+CREATE TABLE subcategories (
+    id SERIAL PRIMARY KEY,
+    category_id INT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+    name VARCHAR(150) NOT NULL,
+    UNIQUE (category_id, name)
+);
+
 CREATE TABLE appeals (
     id SERIAL PRIMARY KEY,
     user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    category_id INT REFERENCES categories(id),
+    category_id INT NOT NULL REFERENCES categories(id),
+    subcategory_id INT REFERENCES subcategories(id),
     status VARCHAR(30) NOT NULL DEFAULT 'pending'
         CHECK (status IN ('pending', 'confirmed', 'in_progress', 'resolved', 'rejected')),
     description TEXT NOT NULL,
@@ -32,7 +40,10 @@ CREATE TABLE appeals (
 CREATE TABLE images (
     id SERIAL PRIMARY KEY,
     appeal_id INT NOT NULL REFERENCES appeals(id) ON DELETE CASCADE,
-    url TEXT NOT NULL,
+    data BYTEA NOT NULL,
+    content_type VARCHAR(50),
+    filename TEXT,
+    size INT,
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

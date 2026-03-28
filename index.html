@@ -82,10 +82,9 @@
 		</script>
 		<script type="module" src="tree-hero.js"></script>
 		<script>
-			async function loadCurrentUser() {
+			async function guardLandingPage() {
 				const navActions = document.getElementById('navActions')
 				const token = localStorage.getItem('token')
-				const storedUser = localStorage.getItem('user')
 
 				if (!navActions) return
 
@@ -95,14 +94,12 @@
 				}
 
 				try {
-					const response = await fetch('/backend/me.php', {
+					const response = await fetch('backend/me.php', {
 						method: 'GET',
 						headers: {
 							Authorization: `Bearer ${token}`,
 						},
 					})
-
-					const data = await response.json()
 
 					if (!response.ok) {
 						localStorage.removeItem('token')
@@ -111,21 +108,7 @@
 						return
 					}
 
-					const email = data.user.email || 'Пользователь'
-
-					navActions.innerHTML = `
-            <span class="user-email" style="margin-right: 12px;">${email}</span>
-            <button class="btn btn-login" id="logoutBtn" type="button">Выйти</button>
-          `
-
-					const logoutBtn = document.getElementById('logoutBtn')
-					if (logoutBtn) {
-						logoutBtn.addEventListener('click', () => {
-							localStorage.removeItem('token')
-							localStorage.removeItem('user')
-							window.location.href = 'index.html'
-						})
-					}
+					window.location.replace('map.html')
 				} catch (error) {
 					localStorage.removeItem('token')
 					localStorage.removeItem('user')
@@ -133,7 +116,7 @@
 				}
 			}
 
-			loadCurrentUser()
+			guardLandingPage()
 		</script>
 	</body>
 </html>

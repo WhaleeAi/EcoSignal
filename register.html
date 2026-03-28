@@ -169,7 +169,7 @@
 					const messageEl = document.getElementById('message')
 
 					try {
-						const response = await fetch('/backend/register.php', {
+						const response = await fetch('backend/register.php', {
 							method: 'POST',
 							headers: {
 								'Content-Type': 'application/json',
@@ -190,7 +190,7 @@
 						messageEl.textContent = data.message
 
 						setTimeout(() => {
-							window.location.href = 'index.html'
+							window.location.href = 'map.html'
 						}, 1000)
 					} catch (error) {
 						messageEl.textContent = 'Ошибка соединения с сервером'
