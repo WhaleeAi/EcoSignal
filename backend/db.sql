@@ -34,7 +34,8 @@ CREATE TABLE appeals (
     latitude DOUBLE PRECISION NOT NULL,
     longitude DOUBLE PRECISION NOT NULL,
     priority INT DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    assigned_admin_id INT REFERENCES users(id)
 );
 
 CREATE TABLE images (

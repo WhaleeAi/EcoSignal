@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EcoSignal | Админ-панель</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@300;400;500;600&family=Roboto+Slab:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body>
+    <div class="admin-page">
+      <aside class="sidebar sidebar--expanded" id="sidebar" aria-label="Боковое меню">
+        <div class="sidebar-top">
+          <div class="sidebar-head">
+            <button class="sidebar-brand" type="button" aria-label="EcoSignal">
+              <img class="sidebar-brand-icon" src="./icons/Group.svg" alt="" />
+              <span class="sidebar-brand-name">EcoSignal</span>
+            </button>
+            <button
+              class="sidebar-icon sidebar-toggle"
+              id="sidebarToggle"
+              type="button"
+              aria-label="Свернуть панель"
+              aria-expanded="true"
+            >
+              <img src="./icons/aside-slider.svg" alt="" />
+            </button>
+          </div>
+
+          <nav class="sidebar-nav" aria-label="Навигация">
+            <button
+              class="sidebar-nav-item sidebar-nav-item--active"
+              type="button"
+              data-href="index.html"
+              aria-label="Главная"
+              aria-current="page"
+            >
+              <img src="./icons/Home.svg" alt="" />
+              <span class="sidebar-nav-label">Главная</span>
+            </button>
+            <button
+              class="sidebar-nav-item"
+              type="button"
+              data-href=""
+              aria-label="Мои обращения"
+            >
+              <img src="./icons/my_appeals.svg" alt="" />
+              <span class="sidebar-nav-label">Мои обращения</span>
+            </button>
+          </nav>
+        </div>
+
+        <div class="sidebar-spacer"></div>
+
+        <button class="sidebar-profile" type="button" aria-label="Профиль">
+          <span class="sidebar-avatar" id="sidebarAvatar">А</span>
+          <span class="sidebar-profile-meta">
+            <span class="sidebar-profile-name">Профиль</span>
+            <span class="sidebar-profile-level">100 уровень</span>
+          </span>
+          <span class="sidebar-profile-arrow" aria-hidden="true">⌄</span>
+        </button>
+      </aside>
+
+      <main class="admin-content">
+        <header class="admin-header">
+          <h1 class="admin-title">Панель администратора</h1>
+        </header>
+
+        <section class="stats-grid" id="statsGrid" aria-label="Сводная статистика"></section>
+
+        <section class="appeals-section" aria-label="Карточки заявок">
+          <h2 class="appeals-title">Последние обращения</h2>
+          <div class="appeals-grid" id="appealsGrid"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="admin.js"></script>
+  </body>
+</html>
