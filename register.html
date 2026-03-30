@@ -189,8 +189,9 @@
 
 						messageEl.textContent = data.message
 
+						const nextPage = data?.user?.role === 'admin' ? 'admin.html' : 'map.html'
 						setTimeout(() => {
-							window.location.href = 'map.html'
+							window.location.href = nextPage
 						}, 1000)
 					} catch (error) {
 						messageEl.textContent = 'Ошибка соединения с сервером'

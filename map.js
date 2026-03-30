@@ -154,14 +154,19 @@
       },
     })
 
-    if (response.ok) {
-      return
+    const data = await response.json().catch(() => null)
+
+    if (!response.ok) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      window.location.replace('login.html')
+      throw new Error('Требуется авторизация')
     }
 
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    window.location.replace('login.html')
-    throw new Error('Требуется авторизация')
+    if (data?.user?.role === 'admin') {
+      window.location.replace('admin.html')
+      throw new Error('__redirect_admin__')
+    }
   }
 
   async function loadCategories() {
@@ -286,6 +291,7 @@
     .then(() => ensureAuthorized())
     .then(() => loadCategories())
     .catch(error => {
+      if (error?.message === '__redirect_admin__') return
       setFormVisible(true)
       setFormMessage(error.message || 'Ошибка загрузки данных', true)
     })

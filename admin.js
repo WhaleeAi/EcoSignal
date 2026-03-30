@@ -1,4 +1,11 @@
 ;(() => {
+  const token = localStorage.getItem('token')
+
+  if (!token) {
+    window.location.replace('login.html')
+    return
+  }
+
   const statsGrid = document.getElementById('statsGrid')
   const appealsGrid = document.getElementById('appealsGrid')
   const sidebar = document.getElementById('sidebar')
@@ -6,69 +13,15 @@
   const sidebarSpacer = document.querySelector('.sidebar-spacer')
   const sidebarAvatar = document.getElementById('sidebarAvatar')
   const sidebarProfileName = document.querySelector('.sidebar-profile-name')
-
-  const MOCK_STATS = [
-    { key: 'new', label: 'Новые обращения', value: 27 },
-    { key: 'assigned', label: 'Назначено мне', value: 8 },
-    { key: 'reviewed', label: 'Рассмотрено (24ч / 7д)', value: '11 / 43' },
-  ]
-
-  const MOCK_APPEALS = [
-    {
-      id: 'AP-1482',
-      user: { name: 'Анна Волкова', tone: '#8fba8b' },
-      category: 'Загрязнение',
-      subcategory: 'Свалка',
-      description: 'Новый навал мусора у контейнерной площадки возле школы №8.',
-      images: [{ label: '1' }, { label: '2' }, { label: '3' }, { label: '4' }],
-    },
-    {
-      id: 'AP-1481',
-      user: { name: 'Олег Миронов', tone: '#8eb0c8' },
-      category: 'Вода',
-      subcategory: 'Сброс',
-      description: 'На берегу ручья заметен стойкий запах и масляная пленка.',
-      images: [{ label: 'A' }, { label: 'B' }, { label: 'C' }, { label: 'D' }],
-    },
-    {
-      id: 'AP-1479',
-      user: { name: 'Мария Фролова', tone: '#c4ae81' },
-      category: 'Воздух',
-      subcategory: 'Дым',
-      description: 'Плотный дым от сжигания отходов в частном секторе после 20:00.',
-      images: [{ label: 'I' }, { label: 'II' }, { label: 'III' }, { label: 'IV' }],
-    },
-    {
-      id: 'AP-1478',
-      user: { name: 'Дмитрий Карпов', tone: '#a7b98e' },
-      category: 'Шум',
-      subcategory: 'Техника',
-      description: 'Ночной шум строительной техники возле парковой зоны. Ночной шум строительной техники возле парковой зоны. Ночной шум строительной техники возле парковой зоны. Ночной шум строительной техники возле парковой зоны.',
-      images: [{ label: 'X' }, { label: 'Y' }, { label: 'Z' }, { label: 'W' }],
-    },
-    {
-      id: 'AP-1477',
-      user: { name: 'Елена Тихонова', tone: '#c39a8b' },
-      category: 'Почва',
-      subcategory: 'Химия',
-      description: 'Пятна неизвестной жидкости возле дренажной канавы, нужен отбор проб.',
-      images: [{ label: 'R1' }, { label: 'R2' }, { label: 'R3' }, { label: 'R4' }],
-    },
-    {
-      id: 'AP-1476',
-      user: { name: 'Сергей Лазарев', tone: '#91ad9f' },
-      category: 'Насаждения',
-      subcategory: 'Вырубка',
-      description: 'Фиксируется вырубка молодых деревьев без информационного щита.',
-      images: [{ label: 'K1' }, { label: 'K2' }, { label: 'K3' }, { label: 'K4' }],
-    },
-  ]
+  const sidebarProfileLevel = document.querySelector('.sidebar-profile-level')
 
   const PHOTO_PALETTE = [
     ['#f4dca1', '#d3bd8a'],
     ['#bfd7bf', '#97b798'],
     ['#b6d4dd', '#8db5c0'],
     ['#e5d0bc', '#c9aa90'],
+    ['#d3c8f1', '#b0a0df'],
+    ['#f1c8cd', '#e3a8b1'],
   ]
 
   function toDataUrl(svgMarkup) {
@@ -84,11 +37,28 @@
     return parts.map(part => part[0]).join('').toUpperCase() || 'A'
   }
 
-  function createAvatarUrl(name, tone) {
+  function getUserDisplayName(user) {
+    if (!user || typeof user !== 'object') return 'Администратор'
+
+    const combined = `${user.first_name || ''} ${user.last_name || ''}`.trim()
+    if (combined) return combined
+    if (user.name) return String(user.name)
+    if (user.email) return String(user.email)
+    return 'Администратор'
+  }
+
+  function getToneBySeed(seedValue) {
+    const seed = Math.abs(Number(seedValue) || 0)
+    const pair = PHOTO_PALETTE[seed % PHOTO_PALETTE.length]
+    return pair[1]
+  }
+
+  function createAvatarUrl(name, seedValue) {
     const initials = getInitials(name)
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 34">
-      <rect width="34" height="34" rx="8" fill="${tone}"/>
-      <text x="17" y="21.5" text-anchor="middle" font-size="12" font-family="Roboto Flex, sans-serif" fill="#1c1c1b">${initials}</text>
+    const tone = getToneBySeed(seedValue)
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 44">
+      <rect width="44" height="44" rx="8" fill="${tone}"/>
+      <text x="22" y="27" text-anchor="middle" font-size="14" font-family="Roboto Flex, sans-serif" fill="#1c1c1b">${initials}</text>
     </svg>`
 
     return toDataUrl(svg)
@@ -96,17 +66,17 @@
 
   function createMiniPhotoUrl(label, index) {
     const palette = PHOTO_PALETTE[index % PHOTO_PALETTE.length]
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 34">
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 44">
       <defs>
         <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stop-color="${palette[0]}"/>
           <stop offset="100%" stop-color="${palette[1]}"/>
         </linearGradient>
       </defs>
-      <rect width="34" height="34" rx="8" fill="url(#g)"/>
-      <circle cx="11" cy="12" r="3" fill="rgba(20,20,19,0.18)"/>
-      <path d="M5 28L13 19L18 24L24 16L30 28Z" fill="rgba(20,20,19,0.22)"/>
-      <text x="17" y="31" text-anchor="middle" font-size="6" font-family="Roboto Flex, sans-serif" fill="rgba(20,20,19,0.45)">${label}</text>
+      <rect width="44" height="44" rx="8" fill="url(#g)"/>
+      <circle cx="14" cy="15" r="4" fill="rgba(20,20,19,0.18)"/>
+      <path d="M6 36L16 24L22 30L30 20L38 36Z" fill="rgba(20,20,19,0.22)"/>
+      <text x="22" y="40" text-anchor="middle" font-size="7" font-family="Roboto Flex, sans-serif" fill="rgba(20,20,19,0.45)">${label}</text>
     </svg>`
 
     return toDataUrl(svg)
@@ -132,21 +102,44 @@
   function createAppealCard(appeal) {
     const card = document.createElement('article')
     card.className = 'appeal-card'
-    card.dataset.appealId = appeal.id
-    card.dataset.status = 'new'
+    card.dataset.appealId = String(appeal.id)
+    card.dataset.status = String(appeal.status || 'pending')
+    card.dataset.assignedAdminId = String(appeal.assigned_admin_id || '')
 
     const topRow = document.createElement('div')
     topRow.className = 'appeal-card__top'
 
+    const userRow = document.createElement('div')
+    userRow.className = 'appeal-card__user'
+
+    const avatar = document.createElement('img')
+    avatar.className = 'appeal-card__avatar'
+    avatar.width = 44
+    avatar.height = 44
+    avatar.alt = `Пользователь: ${appeal.user?.name || 'Неизвестно'}`
+    avatar.src = createAvatarUrl(appeal.user?.name || 'Пользователь', appeal.user?.id)
+
+    const userMeta = document.createElement('div')
+    const userName = document.createElement('p')
+    userName.className = 'appeal-card__name'
+    userName.textContent = String(appeal.user?.name || 'Без имени')
+
+    const userLevel = document.createElement('p')
+    userLevel.className = 'appeal-card__level'
+    userLevel.textContent = `${Number(appeal.user?.level || 0)} уровень`
+
+    userMeta.append(userName, userLevel)
+    userRow.append(avatar, userMeta)
+
     const photosRow = document.createElement('div')
     photosRow.className = 'appeal-card__images'
 
-    const safePhotos = Array.isArray(appeal.images) ? appeal.images.slice(0, 3) : []
-    while (safePhotos.length < 3) {
-      safePhotos.push({ label: String(safePhotos.length + 1) })
+    const inputImages = Array.isArray(appeal.images) ? appeal.images.slice(0, 3) : []
+    while (inputImages.length < 3) {
+      inputImages.push({ label: String(inputImages.length + 1) })
     }
 
-    safePhotos.forEach((photo, index) => {
+    inputImages.forEach((photo, index) => {
       const image = document.createElement('img')
       image.className = 'appeal-card__photo'
       image.width = 44
@@ -156,63 +149,116 @@
       photosRow.append(image)
     })
 
-    const userRow = document.createElement('div')
-    userRow.className = 'appeal-card__user'
-
-    const avatar = document.createElement('img')
-    avatar.className = 'appeal-card__avatar'
-    avatar.width = 44
-    avatar.height = 44
-    avatar.alt = `Пользователь: ${appeal.user.name}`
-    avatar.src = createAvatarUrl(appeal.user.name, appeal.user.tone)
-
-    const userMeta = document.createElement('div')
-    const userName = document.createElement('p')
-    userName.className = 'appeal-card__name'
-    userName.textContent = appeal.user.name
-
-    userMeta.append(userName)
-    userRow.append(avatar, userMeta)
     topRow.append(userRow, photosRow)
 
     const category = document.createElement('p')
     category.className = 'appeal-card__category'
-    category.textContent = `${appeal.category}, ${appeal.subcategory}`
+    const categoryName = String(appeal.category || 'Категория')
+    const subcategoryName = String(appeal.subcategory || 'Без подкатегории')
+    category.textContent = `${categoryName}, ${subcategoryName}`
 
     const description = document.createElement('p')
     description.className = 'appeal-card__description'
-    description.textContent = appeal.description
+    description.textContent = String(appeal.description || '')
 
     card.append(topRow, category, description)
     return card
   }
 
-  async function loadDashboardData() {
-    return {
-      stats: MOCK_STATS,
-      appeals: MOCK_APPEALS,
-    }
-  }
-
   function renderStats(stats) {
     if (!statsGrid) return
     statsGrid.textContent = ''
-    stats.forEach(stat => statsGrid.append(createStatCard(stat)))
+
+    const statItems = [
+      { key: 'new', label: 'Новые обращения', value: Number(stats?.new || 0) },
+      { key: 'assigned', label: 'Назначено мне', value: Number(stats?.assigned || 0) },
+      {
+        key: 'reviewed',
+        label: 'Рассмотрено (24ч / 7д)',
+        value: `${Number(stats?.reviewed_24h || 0)} / ${Number(stats?.reviewed_7d || 0)}`,
+      },
+    ]
+
+    statItems.forEach(stat => statsGrid.append(createStatCard(stat)))
   }
 
   function renderAppeals(appeals) {
     if (!appealsGrid) return
     appealsGrid.textContent = ''
 
-    if (!appeals.length) {
+    if (!Array.isArray(appeals) || appeals.length === 0) {
       const emptyState = document.createElement('p')
       emptyState.className = 'appeals-empty'
-      emptyState.textContent = 'Новых заявок пока нет.'
+      emptyState.textContent = 'У вас пока нет назначенных заявок.'
       appealsGrid.append(emptyState)
       return
     }
 
     appeals.forEach(appeal => appealsGrid.append(createAppealCard(appeal)))
+  }
+
+  function renderErrorState(message) {
+    if (!appealsGrid) return
+    appealsGrid.textContent = ''
+
+    const state = document.createElement('p')
+    state.className = 'appeals-empty'
+    state.textContent = message
+    appealsGrid.append(state)
+  }
+
+  async function ensureAdmin() {
+    const response = await fetch('backend/me.php', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    const data = await response.json().catch(() => null)
+
+    if (!response.ok || !data?.user) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      window.location.replace('login.html')
+      throw new Error('__redirect_login__')
+    }
+
+    if (data.user.role !== 'admin') {
+      window.location.replace('map.html')
+      throw new Error('__redirect_non_admin__')
+    }
+
+    return data.user
+  }
+
+  async function loadDashboardData() {
+    const response = await fetch('backend/admin_dashboard.php', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    const data = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        window.location.replace('login.html')
+        throw new Error('__redirect_login__')
+      }
+
+      if (response.status === 403) {
+        window.location.replace('map.html')
+        throw new Error('__redirect_non_admin__')
+      }
+
+      throw new Error(data.message || 'Не удалось загрузить данные панели')
+    }
+
+    return data
   }
 
   function setupSidebarActions() {
@@ -245,40 +291,48 @@
     }
   }
 
-  function resolveProfileInitials() {
-    try {
-      const userData = JSON.parse(localStorage.getItem('user') || '{}')
-      const baseName = userData.name || userData.full_name || userData.email || ''
-      return getInitials(baseName)
-    } catch {
-      return 'A'
-    }
-  }
+  function setupProfileBadge(user) {
+    const displayName = getUserDisplayName(user)
 
-  function setupProfileBadge() {
-    if (!sidebarAvatar) return
-    let userData = {}
-    try {
-      userData = JSON.parse(localStorage.getItem('user') || '{}')
-    } catch {
-      userData = {}
+    if (sidebarAvatar) {
+      sidebarAvatar.textContent = getInitials(displayName)
     }
 
-    sidebarAvatar.textContent = resolveProfileInitials()
     if (sidebarProfileName) {
-      sidebarProfileName.textContent = 'Профиль'
+      sidebarProfileName.textContent = displayName
+    }
+
+    if (sidebarProfileLevel) {
+      sidebarProfileLevel.textContent = 'Администратор'
     }
   }
 
   async function init() {
     setupSidebarActions()
     setupSidebarToggle()
-    setupProfileBadge()
 
-    const data = await loadDashboardData()
-    renderStats(Array.isArray(data.stats) ? data.stats : [])
-    renderAppeals(Array.isArray(data.appeals) ? data.appeals : [])
+    try {
+      const authUser = await ensureAdmin()
+      const dashboard = await loadDashboardData()
+      const dashboardUser = dashboard?.user || authUser
+
+      setupProfileBadge(dashboardUser)
+      renderStats(dashboard?.stats || {})
+      renderAppeals(dashboard?.appeals || [])
+    } catch (error) {
+      if (
+        error?.message === '__redirect_login__' ||
+        error?.message === '__redirect_non_admin__'
+      ) {
+        return
+      }
+
+      setupProfileBadge({})
+      renderStats({})
+      renderErrorState(error?.message || 'Не удалось загрузить данные.')
+    }
   }
 
   init()
 })()
+

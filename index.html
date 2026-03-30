@@ -108,7 +108,9 @@
 						return
 					}
 
-					window.location.replace('map.html')
+					const data = await response.json()
+					const nextPage = data?.user?.role === 'admin' ? 'admin.html' : 'map.html'
+					window.location.replace(nextPage)
 				} catch (error) {
 					localStorage.removeItem('token')
 					localStorage.removeItem('user')
