@@ -7,8 +7,21 @@ CREATE TABLE users (
     about TEXT,
     score INT DEFAULT 0,
     role VARCHAR(30) NOT NULL DEFAULT 'citizen'
-        CHECK (role IN ('citizen', 'agency', 'admin')),
+        CHECK (role IN ('citizen', 'agency', 'admin', 'superadmin')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE admin_registration_requests (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100),
+    status VARCHAR(20) NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending', 'approved', 'rejected')),
+    requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    processed_at TIMESTAMP,
+    processed_by INT REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE TABLE categories (

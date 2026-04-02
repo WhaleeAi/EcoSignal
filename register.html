@@ -184,12 +184,27 @@
 							return
 						}
 
+						messageEl.textContent = data.message
+
+						if (data?.requires_approval) {
+							localStorage.removeItem('token')
+							localStorage.removeItem('user')
+							setTimeout(() => {
+								window.location.href = 'login.html'
+							}, 1400)
+							return
+						}
+
 						localStorage.setItem('token', data.token)
 						localStorage.setItem('user', JSON.stringify(data.user))
 
-						messageEl.textContent = data.message
-
-						const nextPage = data?.user?.role === 'admin' ? 'admin.html' : 'map.html'
+						const userRole = data?.user?.role
+						const nextPage =
+							userRole === 'superadmin'
+								? 'superadmin.html'
+								: userRole === 'admin'
+									? 'admin.html'
+									: 'map.html'
 						setTimeout(() => {
 							window.location.href = nextPage
 						}, 1000)

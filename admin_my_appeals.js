@@ -433,6 +433,31 @@
     layoutAppealsGrid()
   }
 
+  function renderProcessedAppeals(appeals) {
+    if (!appealsGrid) return
+    appealsGrid.textContent = ''
+    state.appealsById.clear()
+
+    const list = (Array.isArray(appeals) ? appeals : []).filter(
+      a => String(a.status || '') !== 'pending'
+    )
+
+    if (list.length === 0) {
+      const emptyState = document.createElement('p')
+      emptyState.className = 'appeals-empty'
+      emptyState.textContent = 'Нет обращений со статусом подтверждено, в работе, решено или отклонено.'
+      appealsGrid.append(emptyState)
+      layoutAppealsGrid()
+      return
+    }
+
+    list.forEach(appeal => {
+      state.appealsById.set(String(appeal.id), appeal)
+      appealsGrid.append(createAppealCard(appeal))
+    })
+    layoutAppealsGrid()
+  }
+
   function renderErrorState(message) {
     if (!appealsGrid) return
     appealsGrid.textContent = ''
@@ -735,8 +760,8 @@
     return data.user
   }
 
-  async function loadDashboardData() {
-    const response = await fetch('backend/admin_dashboard.php', {
+  async function loadMyAppealsPageData() {
+    const response = await fetch('backend/admin_my_appeals.php', {
       method: 'GET',
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -753,7 +778,7 @@
         window.location.replace('map.html')
         throw new Error('__redirect_non_admin__')
       }
-      throw new Error(data.message || 'Не удалось загрузить данные панели')
+      throw new Error(data.message || 'Не удалось загрузить обращения')
     }
 
     return data
@@ -848,12 +873,11 @@
 
     try {
       const authUser = await ensureAdmin()
-      const dashboard = await loadDashboardData()
-      const dashboardUser = dashboard?.user || authUser
+      const pageData = await loadMyAppealsPageData()
+      const pageUser = pageData?.user || authUser
 
-      setupProfileBadge(dashboardUser)
-      renderStats(dashboard?.stats || {})
-      renderAppeals(dashboard?.appeals || [])
+      setupProfileBadge(pageUser)
+      renderProcessedAppeals(pageData?.appeals || [])
     } catch (error) {
       if (
         error?.message === '__redirect_login__' ||
@@ -864,7 +888,6 @@
       }
 
       setupProfileBadge({})
-      renderStats({})
       renderErrorState(error?.message || 'Не удалось загрузить данные.')
     }
   }

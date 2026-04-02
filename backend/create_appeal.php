@@ -116,7 +116,8 @@ try {
             description,
             latitude,
             longitude,
-            priority
+            priority,
+            assigned_admin_id
         )
         VALUES (
             :user_id,
@@ -125,9 +126,31 @@ try {
             :description,
             :latitude,
             :longitude,
-            :priority
+            :priority,
+            (
+                SELECT u.id
+                FROM users u
+                LEFT JOIN appeals a
+                    ON a.assigned_admin_id = u.id
+                   AND a.status = :pending_status
+                WHERE u.role = :admin_role
+                GROUP BY u.id
+                ORDER BY COUNT(a.id) ASC, u.id ASC
+                LIMIT 1
+            )
         )
-        RETURNING id, user_id, category_id, subcategory_id, status, description, latitude, longitude, priority, created_at
+        RETURNING
+            id,
+            user_id,
+            category_id,
+            subcategory_id,
+            status,
+            description,
+            latitude,
+            longitude,
+            priority,
+            assigned_admin_id,
+            created_at
     ');
 
     $appealStmt->execute([
@@ -138,6 +161,8 @@ try {
         'latitude' => $latitude,
         'longitude' => $longitude,
         'priority' => $priority,
+        'pending_status' => 'pending',
+        'admin_role' => 'admin',
     ]);
 
     $appeal = $appealStmt->fetch();

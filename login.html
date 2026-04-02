@@ -98,7 +98,13 @@
 
 						messageEl.textContent = data.message
 
-						const nextPage = data?.user?.role === 'admin' ? 'admin.html' : 'map.html'
+						const userRole = data?.user?.role
+						const nextPage =
+							userRole === 'superadmin'
+								? 'superadmin.html'
+								: userRole === 'admin'
+									? 'admin.html'
+									: 'map.html'
 						setTimeout(() => {
 							window.location.href = nextPage
 						}, 1000)

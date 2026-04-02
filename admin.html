@@ -46,39 +46,146 @@
             <button
               class="sidebar-nav-item"
               type="button"
-              data-href=""
+              data-href="admin_my_appeals.html"
               aria-label="Мои обращения"
             >
               <img src="./icons/my_appeals.svg" alt="" />
               <span class="sidebar-nav-label">Мои обращения</span>
             </button>
+            <button
+              class="sidebar-nav-item"
+              type="button"
+              data-action="logout"
+              aria-label="Выход"
+            >
+              <img src="./icons/logout.svg" alt="" />
+              <span class="sidebar-nav-label">Выход</span>
+            </button>
           </nav>
         </div>
-
-        <div class="sidebar-spacer"></div>
 
         <button class="sidebar-profile" type="button" aria-label="Профиль">
           <span class="sidebar-avatar" id="sidebarAvatar">А</span>
           <span class="sidebar-profile-meta">
             <span class="sidebar-profile-name">Профиль</span>
-            <span class="sidebar-profile-level">100 уровень</span>
+            <span class="sidebar-profile-level">Администратор</span>
           </span>
           <img class="sidebar-profile-arrow" aria-hidden="true" src="./icons/arrow_down.svg" />
         </button>
       </aside>
 
-      <main class="admin-content">
-        <header class="admin-header">
-          <h1 class="admin-title">Панель администратора</h1>
+      <div class="admin-workspace">
+        <main class="admin-content">
+          <header class="admin-header">
+            <h1 class="admin-title">Панель администратора</h1>
+          </header>
+
+          <section class="stats-grid" id="statsGrid" aria-label="Сводная статистика"></section>
+
+          <section class="appeals-section" id="appealsSection" aria-label="Карточки заявок">
+            <h2 class="appeals-title">Последние обращения</h2>
+            <div class="appeals-grid" id="appealsGrid"></div>
+          </section>
+        </main>
+
+        <aside class="appeal-drawer" id="appealModal" aria-hidden="true">
+          <div class="appeal-drawer__surface">
+            <section class="appeal-modal__dialog" role="region" aria-labelledby="appealModalTitle">
+        <header class="appeal-modal__header">
+          <h3 class="appeal-modal__title" id="appealModalTitle">Заявка</h3>
+          <button class="appeal-modal__close" id="appealModalClose" type="button" aria-label="Закрыть">×</button>
         </header>
 
-        <section class="stats-grid" id="statsGrid" aria-label="Сводная статистика"></section>
+        <div class="appeal-modal__body">
+          <div class="appeal-modal__carousel-wrap" id="appealModalCarouselWrap">
+            <div class="appeal-modal__carousel" id="appealModalCarousel" aria-label="Фотографии заявки">
+              <div class="appeal-modal__images" id="appealModalImages"></div>
+            </div>
+            <button
+              type="button"
+              class="appeal-modal__carousel-arrow appeal-modal__carousel-arrow--prev"
+              id="appealModalCarouselPrev"
+              aria-label="Прокрутить фотографии влево"
+            >
+              <span class="appeal-modal__carousel-arrow-icon appeal-modal__carousel-arrow-icon--prev" aria-hidden="true"></span>
+            </button>
+            <button
+              type="button"
+              class="appeal-modal__carousel-arrow appeal-modal__carousel-arrow--next"
+              id="appealModalCarouselNext"
+              aria-label="Прокрутить фотографии вправо"
+            >
+              <span class="appeal-modal__carousel-arrow-icon appeal-modal__carousel-arrow-icon--next" aria-hidden="true"></span>
+            </button>
+          </div>
 
-        <section class="appeals-section" aria-label="Карточки заявок">
-          <h2 class="appeals-title">Последние обращения</h2>
-          <div class="appeals-grid" id="appealsGrid"></div>
-        </section>
-      </main>
+          <div class="appeal-modal__details">
+            <p class="appeal-modal__category" id="appealModalCategory"></p>
+            <p class="appeal-modal__subcategory" id="appealModalSubcategory"></p>
+            <p class="appeal-modal__user" id="appealModalUser"></p>
+            <p class="appeal-modal__description" id="appealModalDescription"></p>
+
+            <fieldset class="appeal-modal__field">
+              <legend>Приоритет</legend>
+              <div class="appeal-modal__priority" id="appealModalPriority">
+                <label class="appeal-modal__priority-option"><input type="radio" name="appealModalPriority" value="0" checked />1</label>
+                <label class="appeal-modal__priority-option"><input type="radio" name="appealModalPriority" value="1" />2</label>
+                <label class="appeal-modal__priority-option"><input type="radio" name="appealModalPriority" value="2" />3</label>
+                <label class="appeal-modal__priority-option"><input type="radio" name="appealModalPriority" value="3" />4</label>
+                <label class="appeal-modal__priority-option"><input type="radio" name="appealModalPriority" value="4" />5</label>
+              </div>
+            </fieldset>
+
+            <label class="appeal-modal__field appeal-modal__field--agency">
+              <span>Надзорный орган (заглушка)</span>
+              <div class="appeal-modal__select-wrap" id="appealModalAgencyWrap">
+                <button
+                  type="button"
+                  class="appeal-modal__select-trigger"
+                  id="appealModalAgencyTrigger"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                  aria-controls="appealModalAgencyList"
+                >
+                  <span class="appeal-modal__select-value" id="appealModalAgencyDisplay">Выберите орган</span>
+                  <span class="appeal-modal__select-chevron" aria-hidden="true"></span>
+                </button>
+                <ul class="appeal-modal__select-dropdown" id="appealModalAgencyList" role="listbox" hidden></ul>
+                <select class="appeal-modal__select-native" id="appealModalAgency" tabindex="-1" aria-hidden="true">
+                  <option value="">Выберите орган</option>
+                  <option value="Росприроднадзор">Росприроднадзор</option>
+                  <option value="Муниципальный контроль">Муниципальный контроль</option>
+                  <option value="Россельхознадзор">Россельхознадзор</option>
+                </select>
+              </div>
+            </label>
+
+            <p class="appeal-modal__note">
+              Назначение в надзорный орган пока работает как UI-заглушка.
+            </p>
+            <p class="appeal-modal__message" id="appealModalMessage"></p>
+          </div>
+        </div>
+
+        <footer class="appeal-modal__footer">
+          <button class="appeal-modal__btn appeal-modal__btn--ghost" id="appealModalCancel" type="button">Отмена</button>
+          <button class="appeal-modal__btn appeal-modal__btn--primary" id="appealModalSave" type="button">Сохранить</button>
+        </footer>
+            </section>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <div class="photo-lightbox" id="photoLightbox" hidden>
+      <div class="photo-lightbox__backdrop" id="photoLightboxBackdrop"></div>
+      <button class="photo-lightbox__close" id="photoLightboxClose" type="button" aria-label="Закрыть">×</button>
+      <button class="photo-lightbox__nav photo-lightbox__nav--prev" id="photoLightboxPrev" type="button" aria-label="Предыдущее">‹</button>
+      <div class="photo-lightbox__stage">
+        <img class="photo-lightbox__img" id="photoLightboxImg" alt="" />
+      </div>
+      <button class="photo-lightbox__nav photo-lightbox__nav--next" id="photoLightboxNext" type="button" aria-label="Следующее">›</button>
+      <p class="photo-lightbox__counter" id="photoLightboxCounter" aria-live="polite"></p>
     </div>
 
     <script src="admin.js"></script>
