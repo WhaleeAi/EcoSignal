@@ -6,6 +6,7 @@
     return
   }
 
+  const logoutBtn = document.getElementById('mapLogoutBtn')
   const closeBtn = document.getElementById('mapCloseBtn')
   const addPinBtn = document.getElementById('mapAddPinBtn')
   const reportBtn = document.querySelector('.report-btn')
@@ -19,6 +20,14 @@
   const imagesInput = document.getElementById('appealImages')
   const coordsLabel = document.getElementById('appealCoords')
   const formMessage = document.getElementById('appealFormMessage')
+
+  const logout = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    window.location.replace('index.html')
+  }
+
+  logoutBtn?.addEventListener('click', logout)
 
   if (
     !closeBtn ||
@@ -165,6 +174,11 @@
 
     if (data?.user?.role === 'admin') {
       window.location.replace('admin.html')
+      throw new Error('__redirect_admin__')
+    }
+
+    if (data?.user?.role === 'superadmin') {
+      window.location.replace('superadmin.html')
       throw new Error('__redirect_admin__')
     }
   }

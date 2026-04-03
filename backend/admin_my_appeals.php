@@ -32,15 +32,6 @@ try {
     $pdo = getPDO();
     $adminId = (int)$admin['id'];
 
-    $statsStmt = $pdo->prepare("
-        SELECT COUNT(*) AS pending_count
-        FROM appeals
-        WHERE assigned_admin_id = :admin_id
-          AND status = 'pending'
-    ");
-    $statsStmt->execute(['admin_id' => $adminId]);
-    $statsRow = $statsStmt->fetch() ?: [];
-
     $appealsStmt = $pdo->prepare("
         SELECT
             a.id AS appeal_id,
@@ -61,7 +52,7 @@ try {
         INNER JOIN categories c ON c.id = a.category_id
         LEFT JOIN subcategories s ON s.id = a.subcategory_id
         WHERE a.assigned_admin_id = :admin_id
-          AND a.status = 'pending'
+          AND a.status <> 'pending'
         ORDER BY a.created_at DESC
     ");
     $appealsStmt->execute(['admin_id' => $adminId]);
@@ -158,12 +149,6 @@ try {
             'id' => $adminId,
             'name' => $adminName,
             'role' => (string)$admin['role'],
-        ],
-        'stats' => [
-            'new' => (int)($statsRow['pending_count'] ?? 0),
-            'assigned' => (int)($statsRow['pending_count'] ?? 0),
-            'reviewed_24h' => 0,
-            'reviewed_7d' => 0,
         ],
         'appeals' => $appeals,
     ]);

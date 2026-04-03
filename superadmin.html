@@ -1,0 +1,102 @@
+﻿<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EcoSignal | Superadmin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@300;400;500;600&family=Roboto+Slab:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="superadmin.css" />
+  </head>
+  <body>
+    <div class="superadmin-page">
+      <aside class="super-sidebar super-sidebar--expanded" id="superSidebar" aria-label="Боковое меню">
+        <div class="super-sidebar__top">
+          <div class="super-sidebar__head">
+            <button class="super-sidebar__brand" id="superBrand" type="button" aria-label="EcoSignal">
+              <img class="super-sidebar__brand-icon" src="./icons/Group.svg" alt="" />
+              <span class="super-sidebar__brand-name">EcoSignal</span>
+            </button>
+            <button
+              class="super-sidebar__toggle"
+              id="superSidebarToggle"
+              type="button"
+              aria-label="Свернуть панель"
+              aria-expanded="true"
+            >
+              <img src="./icons/aside-slider.svg" alt="" />
+            </button>
+          </div>
+
+          <nav class="super-sidebar__nav" aria-label="Навигация">
+            <button
+              class="super-sidebar__item super-sidebar__item--active"
+              type="button"
+              data-href="superadmin.html"
+              aria-current="page"
+            >
+              <img src="./icons/Home.svg" alt="" />
+              <span class="super-sidebar__label">Superadmin</span>
+            </button>
+            <button class="super-sidebar__item" type="button" data-href="admin.html">
+              <img src="./icons/my_appeals.svg" alt="" />
+              <span class="super-sidebar__label">Admin Dashboard</span>
+            </button>
+          </nav>
+        </div>
+
+        <div class="super-sidebar__spacer" id="superSidebarSpacer"></div>
+
+        <button class="super-sidebar__profile" type="button" aria-label="Профиль">
+          <span class="super-sidebar__avatar" id="superSidebarAvatar">S</span>
+          <span class="super-sidebar__profile-meta">
+            <span class="super-sidebar__profile-name" id="superSidebarName">Профиль</span>
+            <span class="super-sidebar__profile-role">superadmin</span>
+          </span>
+          <img class="super-sidebar__profile-arrow" src="./icons/arrow_down.svg" aria-hidden="true" />
+        </button>
+      </aside>
+
+      <main class="super-content">
+        <header class="super-header">
+          <h1 class="super-title">Панель супер-администратора</h1>
+        </header>
+
+        <section class="super-stats" id="superStats"></section>
+
+        <section class="super-block super-block--form">
+          <div class="super-block__head">
+            <h2>Добавить администратора</h2>
+          </div>
+          <form class="super-form" id="createAdminForm">
+            <input type="text" id="createAdminFullName" placeholder="ФИО" required />
+            <input type="email" id="createAdminEmail" placeholder="Email" required />
+            <input type="password" id="createAdminPassword" placeholder="Пароль" minlength="6" required />
+            <button type="submit">Добавить admin</button>
+          </form>
+          <p class="super-feedback" id="createAdminFeedback"></p>
+        </section>
+
+        <section class="super-block">
+          <div class="super-block__head">
+            <h2>Заявки на роль admin</h2>
+          </div>
+          <div class="super-grid" id="pendingRequestsGrid"></div>
+        </section>
+
+        <section class="super-block">
+          <div class="super-block__head">
+            <h2>Текущие администраторы</h2>
+          </div>
+          <div class="super-grid" id="adminsGrid"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="superadmin.js"></script>
+  </body>
+</html>
