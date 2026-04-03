@@ -14,12 +14,14 @@
 	</head>
 	<body class="landing-page">
 		<header class="site-header">
-			<nav class="navbar container">
+			<nav class="navbar header-container">
 				<a class="logo" href="index.html">
 					<img class="logo-image" src="icons/Group.svg" alt="EcoSignal" />
 					EcoSignal
 				</a>
 				<ul class="nav-links">
+					<li><a href="#how-it-works">Как это работает</a></li>
+					<li><a href="#roles">Для кого</a></li>
 					<li><a href="#contacts">Контакты</a></li>
 					<li><a href="#about">О проекте</a></li>
 				</ul>
@@ -30,39 +32,263 @@
 		</header>
 
 		<main class="landing-main">
-			<div class="hero-wrap">
-				<section class="hero container">
-					<div class="hero-copy">
-						<h1>
-							<span class="hero-first-line">Увидели экологическую</span
-							><br />проблему?
-						</h1>
-						<p class="hero-subtitle">Подайте сигнал</p>
-						<a class="btn btn-report" href="register.html"
-							>Сообщить о проблеме</a
-						>
-					</div>
-
-					<div class="hero-visual" aria-hidden="true">
-						<div id="treeScene">
-							<div id="previewHack"></div>
+			<section class="wwf-hero">
+				<div class="container wwf-hero-grid">
+					<div class="wwf-hero-media">
+						<div class="wwf-hero-media-top">
+							<span class="wwf-pill">EcoSignal</span>
+							<span class="wwf-pill wwf-pill--soft">Экологический мониторинг</span>
+						</div>
+						<div class="wwf-hero-scene" aria-hidden="true">
+							<div id="treeScene">
+								<div id="previewHack"></div>
+							</div>
+						</div>
+						<div class="wwf-hero-media-bottom">
+							<p class="wwf-media-caption">
+								Цифровой сервис для фиксации экологических нарушений и передачи
+								обращений ответственным участникам системы.
+							</p>
 						</div>
 					</div>
-				</section>
-			</div>
 
-			<section id="about" class="about container">
-				<h2>О проекте</h2>
-				<p>
-					EcoSignal помогает жителям быстро передавать сигналы о нарушениях
-					состояния природных объектов и сокращает путь обращения до
-					ответственных органов.
-				</p>
+					<div class="wwf-hero-copy">
+						<p class="section-kicker">Главная задача</p>
+						<h1>Упростить путь от наблюдения проблемы до организованного реагирования</h1>
+						<p class="wwf-lead">
+							EcoSignal помогает гражданам быстро направлять обращения о
+							состоянии природных объектов, а органам надзора и администраторам
+							получать структурированную информацию для последующей обработки.
+						</p>
+						<div class="hero-actions">
+							<a class="btn btn-report" href="register.html">Перейти к регистрации</a>
+							<a class="btn btn-ghost" href="#how-it-works">Как это работает</a>
+						</div>
+						<div class="wwf-hero-notes">
+							<div>
+								<strong>Оперативная фиксация</strong>
+								<span>Проблема, координаты и подтверждающие материалы в одном обращении.</span>
+							</div>
+							<div>
+								<strong>Единая маршрутизация</strong>
+								<span>Система сокращает путь сигнала до ответственных участников.</span>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<section id="about" class="feature-story">
+				<div class="container feature-story-grid">
+					<figure class="feature-story-media">
+						<img
+							src="imgs/reg_illustration.png"
+							alt="Интерфейс карты EcoSignal с карточкой обращения"
+						/>
+					</figure>
+					<div class="feature-story-copy">
+						<p class="section-kicker">О проекте</p>
+						<h2>EcoSignal как единая цифровая среда экологического мониторинга</h2>
+						<p>
+							Сервис предназначен для фиксации нарушений, связанных с состоянием
+							природных объектов, и последующей передачи обращений ответственным
+							участникам системы.
+						</p>
+						<ul class="story-list">
+							<li>Фиксация обращений на карте и через форму заявки.</li>
+							<li>Передача фото- и видеоматериалов вместе с описанием проблемы.</li>
+							<li>Маршрутизация сигналов в адрес ответственных органов и администраторов.</li>
+						</ul>
+					</div>
+				</div>
+			</section>
+
+			<section class="editorial-cards">
+				<div class="container">
+					<div class="editorial-grid">
+						<article class="editorial-card">
+							<p class="section-kicker">Проблема</p>
+							<h3>Высокий барьер подачи обращения</h3>
+							<p>
+								При выявлении нарушения гражданину приходится тратить время на
+								поиск порядка подачи заявления и определение ответственной
+								структуры.
+							</p>
+						</article>
+						<article class="editorial-card">
+							<p class="section-kicker">Решение</p>
+							<h3>Одна точка входа в систему реагирования</h3>
+							<p>
+								EcoSignal объединяет фиксацию проблемы, передачу материалов и
+								дальнейшую маршрутизацию обращения в рамках единого сервиса.
+							</p>
+						</article>
+						<article class="editorial-card">
+							<p class="section-kicker">Результат</p>
+							<h3>Более быстрый и прозрачный процесс</h3>
+							<p>
+								Координаты, описание и медиаматериалы позволяют ответственным
+								участникам быстрее оценивать ситуацию и организовывать реакцию.
+							</p>
+						</article>
+					</div>
+				</div>
+			</section>
+
+			<section id="how-it-works" class="workflow-band">
+				<div class="container">
+					<div class="workflow-head">
+						<p class="section-kicker">Как это работает</p>
+						<h2>Понятный маршрут обращения от фиксации до реагирования</h2>
+						<p>
+							Пользователь передаёт сигнал через сервис, после чего система
+							обеспечивает его проверку, маршрутизацию и дальнейшую координацию.
+						</p>
+					</div>
+					<div class="workflow-grid">
+						<article class="workflow-card">
+							<span>01</span>
+							<h3>Выявление проблемы</h3>
+							<p>Фиксация загрязнения, свалки, повреждения зелёной зоны или иного нарушения.</p>
+						</article>
+						<article class="workflow-card">
+							<span>02</span>
+							<h3>Формирование обращения</h3>
+							<p>Добавление описания, координат, фотографий и видеоматериалов при наличии.</p>
+						</article>
+						<article class="workflow-card">
+							<span>03</span>
+							<h3>Проверка и назначение</h3>
+							<p>Подтверждение обращения и определение ответственного органа либо направления обработки.</p>
+						</article>
+						<article class="workflow-card">
+							<span>04</span>
+							<h3>Организация реагирования</h3>
+							<p>Оценка приоритетности, формирование плана действий и уведомление пользователей.</p>
+						</article>
+					</div>
+				</div>
+			</section>
+
+			<section class="feature-story feature-story--reverse">
+				<div class="container feature-story-grid">
+					<div class="feature-story-copy">
+						<p class="section-kicker">Возможности платформы</p>
+						<h2>Функциональные возможности системы</h2>
+						<p>
+							Функции EcoSignal охватывают как подачу обращений, так и их
+							последующую обработку, приоритизацию и информирование пользователей.
+						</p>
+					</div>
+					<figure class="feature-story-media feature-story-media--map">
+						<img
+							src="imgs/reg_illustration.png"
+							alt="Карта с обращениями и визуализацией проблемных точек"
+						/>
+					</figure>
+				</div>
+				<div class="container">
+					<div class="capability-grid">
+						<article class="capability-card">
+							<h3>Карта обращений</h3>
+							<p>Просмотр проблемных точек и обращений в едином картографическом интерфейсе.</p>
+						</article>
+						<article class="capability-card">
+							<h3>Заявки с доказательствами</h3>
+							<p>Передача фотографий и видео для подтверждения зафиксированного нарушения.</p>
+						</article>
+						<article class="capability-card">
+							<h3>Назначение ответственных</h3>
+							<p>Указание ответственного органа либо передача обращения на распределение.</p>
+						</article>
+						<article class="capability-card">
+							<h3>Работа с приоритетами</h3>
+							<p>Сортировка обращений и выделение случаев, требующих более быстрого реагирования.</p>
+						</article>
+						<article class="capability-card">
+							<h3>Уведомления по области</h3>
+							<p>Информирование пользователей, находящихся в заданной территориальной зоне.</p>
+						</article>
+						<article class="capability-card">
+							<h3>Списки и карта</h3>
+							<p>Работа с обращениями как в списочном формате, так и на карте.</p>
+						</article>
+					</div>
+				</div>
+			</section>
+
+			<section id="roles" class="editorial-cards editorial-cards--audience">
+				<div class="container">
+					<div class="editorial-head">
+						<p class="section-kicker">Для кого создан сервис</p>
+						<h2>EcoSignal объединяет разные роли в одном процессе реагирования</h2>
+					</div>
+					<div class="editorial-grid">
+						<article class="editorial-card editorial-card--tall">
+							<h3>Граждане</h3>
+							<p>
+								Направляют обращения, отслеживают ситуацию на карте и получают
+								уведомления о потенциально опасных состояниях рядом с собой.
+							</p>
+						</article>
+						<article class="editorial-card editorial-card--tall">
+							<h3>Органы надзора</h3>
+							<p>
+								Получают относящиеся к ним обращения, анализируют их, задают
+								приоритет и координируют необходимые меры реагирования.
+							</p>
+						</article>
+						<article class="editorial-card editorial-card--tall">
+							<h3>Администраторы</h3>
+							<p>
+								Подтверждают заявки, назначают ответственные органы и контролируют
+								целостность общего потока обращений.
+							</p>
+						</article>
+					</div>
+				</div>
+			</section>
+
+			<section class="cases-band">
+				<div class="container">
+					<div class="editorial-head">
+						<p class="section-kicker">Типовые кейсы</p>
+						<h2>О каких проблемах можно сообщить через EcoSignal</h2>
+					</div>
+					<div class="cases-cloud">
+						<span>Загрязнение водоёмов</span>
+						<span>Несанкционированные свалки</span>
+						<span>Повреждение зелёных зон</span>
+						<span>Задымление и выбросы</span>
+						<span>Загрязнение почвы</span>
+						<span>Опасные изменения природных территорий</span>
+						<span>Несанкционированные сбросы</span>
+						<span>Иные экологические нарушения</span>
+					</div>
+				</div>
+			</section>
+
+			<section class="cta-band cta-band--editorial">
+				<div class="container cta-band-inner">
+					<div>
+						<p class="section-kicker">Следующий шаг</p>
+						<h2>Присоединяйтесь к экологическому мониторингу вместе с EcoSignal</h2>
+						<p>
+							Помогайте выявлять экологические нарушения, направлять обращения и
+							делать реагирование на проблемы природных объектов более
+							оперативным и прозрачным.
+						</p>
+					</div>
+					<div class="cta-band-actions">
+						<a class="btn btn-report" href="register.html">Перейти к регистрации</a>
+						<a class="btn btn-secondary" href="login.html">Войти в систему</a>
+					</div>
+				</div>
 			</section>
 		</main>
 
 		<footer id="contacts" class="site-footer">
-			<div class="container footer-content">
+			<div class="footer-container footer-content">
 				<p>EcoSignal</p>
 				<p>info@ecosignal.local</p>
 			</div>
