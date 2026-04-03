@@ -14,19 +14,41 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 
 requireAuth();
 
+function tableExists(PDO $pdo, string $tableName): bool
+{
+    $stmt = $pdo->prepare('SELECT to_regclass(:table_name) AS table_name');
+    $stmt->execute(['table_name' => $tableName]);
+    $row = $stmt->fetch();
+
+    return !empty($row['table_name']);
+}
+
 try {
     $pdo = getPDO();
+    $hasSubcategories = tableExists($pdo, 'subcategories');
 
-    $stmt = $pdo->query('
-        SELECT
-            c.id AS category_id,
-            c.name AS category_name,
-            s.id AS subcategory_id,
-            s.name AS subcategory_name
-        FROM categories c
-        LEFT JOIN subcategories s ON s.category_id = c.id
-        ORDER BY c.name ASC, s.name ASC
-    ');
+    if ($hasSubcategories) {
+        $stmt = $pdo->query('
+            SELECT
+                c.id AS category_id,
+                c.name AS category_name,
+                s.id AS subcategory_id,
+                s.name AS subcategory_name
+            FROM categories c
+            LEFT JOIN subcategories s ON s.category_id = c.id
+            ORDER BY c.name ASC, s.name ASC
+        ');
+    } else {
+        $stmt = $pdo->query('
+            SELECT
+                c.id AS category_id,
+                c.name AS category_name,
+                NULL::int AS subcategory_id,
+                NULL::text AS subcategory_name
+            FROM categories c
+            ORDER BY c.name ASC
+        ');
+    }
 
     $rows = $stmt->fetchAll();
     $categories = [];

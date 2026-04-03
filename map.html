@@ -21,7 +21,7 @@
         <button class="sidebar-icon" type="button" aria-label="Главная">
           <img src="./icons/Home.svg" alt="Home" class="sidebar-icon">
         </button>
-        <button class="sidebar-icon" type="button" aria-label="Сигналы">
+        <button class="sidebar-icon" id="mapMyAppealsBtn" type="button" aria-label="Мои обращения">
           <img src="./icons/my_appeals.svg" alt="Home" class="sidebar-icon">
         </button>
         <button class="sidebar-icon" id="mapLogoutBtn" type="button" aria-label="Выход">
@@ -65,8 +65,9 @@
                 <circle cx="11" cy="11" r="6"></circle>
                 <line x1="15.5" y1="15.5" x2="20" y2="20"></line>
               </svg>
-              <input type="text" placeholder="Ищите по проблеме/месту" />
+              <input id="mapSearchInput" type="text" placeholder="Ищите по проблеме/месту" />
             </label>
+            <div id="appealsList" class="appeals-list" aria-live="polite"></div>
 
             <div id="appealFormWrap" class="appeal-form-wrap" hidden>
               <h2 class="appeal-form-title">Новая заявка</h2>
@@ -131,6 +132,25 @@
           <button class="report-btn" type="button">Сообщить о проблеме</button>
         </section>
       </main>
+    </div>
+
+    <div id="appealDetailsModal" class="appeal-details-modal" hidden>
+      <div class="appeal-details-modal__backdrop"></div>
+      <article class="appeal-details-modal__card" role="dialog" aria-modal="true" aria-labelledby="appealDetailsTitle">
+        <button id="appealDetailsClose" class="appeal-details-modal__close" type="button" aria-label="Закрыть">
+          ×
+        </button>
+        <h2 id="appealDetailsTitle" class="appeal-details-modal__title">Заявка</h2>
+        <div class="appeal-details-modal__meta">
+          <p id="appealDetailsUser" class="appeal-details-modal__line"></p>
+          <p id="appealDetailsCategory" class="appeal-details-modal__line"></p>
+          <p id="appealDetailsStatus" class="appeal-details-modal__line"></p>
+          <p id="appealDetailsDate" class="appeal-details-modal__line"></p>
+          <p id="appealDetailsCoords" class="appeal-details-modal__line"></p>
+        </div>
+        <p id="appealDetailsDescription" class="appeal-details-modal__description"></p>
+        <div id="appealDetailsImages" class="appeal-details-modal__images"></div>
+      </article>
     </div>
     <script src="https://api-maps.yandex.ru/2.1/?apikey=c4b88e0d-3370-4eee-b2cd-7bb4ad66c4af&lang=ru_RU"></script>
     <script src="map.js"></script>

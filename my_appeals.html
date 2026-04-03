@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EcoSignal | Мои обращения</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="my_appeals.css" />
+  </head>
+  <body>
+    <div class="page">
+      <aside class="sidebar" aria-label="Навигация">
+        <button class="sidebar-icon first" type="button" aria-label="Панель">
+          <img src="./icons/aside-slider.svg" alt="" class="sidebar-icon-img" />
+        </button>
+        <button class="sidebar-icon" id="myAppealsMapBtn" type="button" aria-label="Карта">
+          <img src="./icons/Home.svg" alt="" class="sidebar-icon-img" />
+        </button>
+        <button class="sidebar-icon is-active" type="button" aria-label="Мои обращения">
+          <img src="./icons/my_appeals.svg" alt="" class="sidebar-icon-img" />
+        </button>
+        <button class="sidebar-icon" id="myAppealsLogoutBtn" type="button" aria-label="Выход">
+          <img src="./icons/logout.svg" alt="" class="sidebar-icon-img" />
+        </button>
+        <div class="sidebar-spacer"></div>
+        <div class="sidebar-avatar" aria-hidden="true"></div>
+      </aside>
+
+      <main class="content">
+        <header class="header">
+          <h1 id="myAppealsTitle">Мои обращения: 0</h1>
+          <p id="myAppealsUser" class="user-caption"></p>
+        </header>
+        <section id="myAppealsGrid" class="grid" aria-live="polite"></section>
+      </main>
+    </div>
+
+    <script src="my_appeals.js"></script>
+  </body>
+</html>
+
