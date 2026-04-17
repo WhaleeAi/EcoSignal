@@ -6,8 +6,12 @@
     return
   }
 
-  const logoutBtn = document.getElementById('mapLogoutBtn')
-  const myAppealsBtn = document.getElementById('mapMyAppealsBtn')
+  const mapPage = document.querySelector('.map-page')
+  const sidebar = document.getElementById('sidebar')
+  const sidebarToggle = document.getElementById('sidebarToggle')
+  const sidebarAvatar = document.getElementById('sidebarAvatar')
+  const sidebarProfileName = document.querySelector('.sidebar-profile-name')
+  const sidebarProfileLevel = document.querySelector('.sidebar-profile-level')
   const closeBtn = document.getElementById('mapCloseBtn')
   const addPinBtn = document.getElementById('mapAddPinBtn')
   const reportBtn = document.querySelector('.report-btn')
@@ -34,6 +38,16 @@
   const appealDetailsCoords = document.getElementById('appealDetailsCoords')
   const appealDetailsDescription = document.getElementById('appealDetailsDescription')
   const appealDetailsImages = document.getElementById('appealDetailsImages')
+  const photoLightbox = document.getElementById('photoLightbox')
+  const photoLightboxBackdrop = document.getElementById('photoLightboxBackdrop')
+  const photoLightboxClose = document.getElementById('photoLightboxClose')
+  const photoLightboxPrev = document.getElementById('photoLightboxPrev')
+  const photoLightboxNext = document.getElementById('photoLightboxNext')
+  const photoLightboxImg = document.getElementById('photoLightboxImg')
+  const photoLightboxCounter = document.getElementById('photoLightboxCounter')
+  const photoLightboxStage = document.querySelector('.photo-lightbox__stage')
+
+  let map = null
 
   const logout = () => {
     localStorage.removeItem('token')
@@ -41,10 +55,8 @@
     window.location.replace('index.html')
   }
 
-  logoutBtn?.addEventListener('click', logout)
-  myAppealsBtn?.addEventListener('click', () => {
-    window.location.href = 'my_appeals.html'
-  })
+  setupSidebarActions()
+  setupSidebarToggle()
 
   if (
     !closeBtn ||
@@ -77,7 +89,6 @@
     return
   }
 
-  let map = null
   let selectedPlacemark = null
   let selectedCoords = null
   let categories = []
@@ -85,6 +96,11 @@
   let visibleAppeals = []
   let mapAppealPlacemarks = []
   const placemarkByAppealId = new Map()
+  const lightboxState = {
+    urls: [],
+    index: 0,
+  }
+  let lightboxTouchStartX = 0
 
   function setFormMessage(text, isError = false) {
     formMessage.textContent = text
@@ -120,6 +136,15 @@
     return parts.map(part => part[0]).join('').toUpperCase() || 'U'
   }
 
+  function getUserDisplayName(user) {
+    if (!user || typeof user !== 'object') return 'Пользователь'
+    const combined = `${user.first_name || ''} ${user.last_name || ''}`.trim()
+    if (combined) return combined
+    if (user.name) return String(user.name)
+    if (user.email) return String(user.email)
+    return 'Пользователь'
+  }
+
   function createAvatarUrl(name, seedValue) {
     const tones = ['#d3bd8a', '#97b798', '#8db5c0', '#c9aa90', '#b0a0df', '#e3a8b1']
     const seed = Math.abs(Number(seedValue) || 0)
@@ -132,6 +157,76 @@
     </svg>`
 
     return toDataUrl(svg)
+  }
+
+  function setupSidebarActions() {
+    const navButtons = document.querySelectorAll('.sidebar-nav-item[data-href], .sidebar-nav-item[data-action]')
+    navButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const action = button.dataset.action
+        if (action === 'logout') {
+          logout()
+          return
+        }
+
+        const href = button.dataset.href
+        if (href) {
+          window.location.href = href
+        }
+      })
+    })
+  }
+
+  function rerenderMapAfterLayoutShift() {
+    if (!map?.container) return
+
+    const fit = () => {
+      try {
+        map.container.fitToViewport()
+      } catch (_error) {
+        // no-op
+      }
+    }
+
+    window.requestAnimationFrame(fit)
+    window.setTimeout(fit, 180)
+    window.setTimeout(fit, 320)
+  }
+
+  function setSidebarExpanded(expanded) {
+    if (!sidebar || !sidebarToggle || !mapPage) return
+    sidebar.classList.toggle('sidebar--expanded', expanded)
+    mapPage.classList.toggle('map-page--sidebar-expanded', expanded)
+    sidebarToggle.setAttribute('aria-expanded', String(expanded))
+    sidebarToggle.setAttribute('aria-label', expanded ? 'Свернуть панель' : 'Развернуть панель')
+    rerenderMapAfterLayoutShift()
+  }
+
+  function setupSidebarToggle() {
+    if (!sidebar || !sidebarToggle) return
+
+    setSidebarExpanded(sidebar.classList.contains('sidebar--expanded'))
+
+    const toggleSidebar = () => {
+      setSidebarExpanded(!sidebar.classList.contains('sidebar--expanded'))
+    }
+
+    sidebarToggle.addEventListener('click', toggleSidebar)
+    sidebar.addEventListener('click', event => {
+      const target = event.target
+      if (!(target instanceof Element)) return
+      if (target.closest('button, a, input, select, textarea, label, [role="button"]')) {
+        return
+      }
+      toggleSidebar()
+    })
+  }
+
+  function setupProfileBadge(user) {
+    const displayName = getUserDisplayName(user)
+    if (sidebarAvatar) sidebarAvatar.textContent = getInitials(displayName)
+    if (sidebarProfileName) sidebarProfileName.textContent = displayName
+    if (sidebarProfileLevel) sidebarProfileLevel.textContent = 'Пользователь'
   }
 
   function createMiniPhotoUrl(index, size = 36) {
@@ -158,6 +253,92 @@
     </svg>`
 
     return toDataUrl(svg)
+  }
+
+  function updateLightboxView() {
+    const urls = lightboxState.urls
+    const index = lightboxState.index
+
+    if (!photoLightboxImg || !urls.length) return
+
+    photoLightboxImg.src = urls[index]
+    photoLightboxImg.alt = `Фото ${index + 1} из ${urls.length}`
+    if (photoLightboxCounter) {
+      photoLightboxCounter.textContent = urls.length > 1 ? `${index + 1} / ${urls.length}` : ''
+    }
+    const hasMany = urls.length > 1
+    if (photoLightboxPrev) photoLightboxPrev.hidden = !hasMany
+    if (photoLightboxNext) photoLightboxNext.hidden = !hasMany
+  }
+
+  function openPhotoLightbox(urls, startIndex = 0) {
+    const list = (Array.isArray(urls) ? urls : []).filter(Boolean)
+    if (!photoLightbox || !list.length) return
+
+    lightboxState.urls = list
+    lightboxState.index = Math.max(0, Math.min(Number(startIndex) || 0, list.length - 1))
+    photoLightbox.hidden = false
+    updateLightboxView()
+  }
+
+  function closePhotoLightbox() {
+    if (!photoLightbox) return
+    photoLightbox.hidden = true
+    lightboxState.urls = []
+    lightboxState.index = 0
+    if (photoLightboxImg) photoLightboxImg.removeAttribute('src')
+  }
+
+  function lightboxStep(delta) {
+    const size = lightboxState.urls.length
+    if (size <= 1) return
+    lightboxState.index = (lightboxState.index + delta + size) % size
+    updateLightboxView()
+  }
+
+  function setupPhotoLightbox() {
+    photoLightboxClose?.addEventListener('click', closePhotoLightbox)
+    photoLightboxBackdrop?.addEventListener('click', closePhotoLightbox)
+    photoLightboxPrev?.addEventListener('click', () => lightboxStep(-1))
+    photoLightboxNext?.addEventListener('click', () => lightboxStep(1))
+
+    photoLightboxStage?.addEventListener(
+      'touchstart',
+      event => {
+        if (event.touches.length !== 1) return
+        lightboxTouchStartX = event.touches[0].clientX
+      },
+      { passive: true }
+    )
+
+    photoLightboxStage?.addEventListener(
+      'touchend',
+      event => {
+        if (!event.changedTouches.length) return
+        const deltaX = event.changedTouches[0].clientX - lightboxTouchStartX
+        if (deltaX > 50) lightboxStep(-1)
+        else if (deltaX < -50) lightboxStep(1)
+      },
+      { passive: true }
+    )
+
+    document.addEventListener('keydown', event => {
+      if (!photoLightbox || photoLightbox.hidden) return
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+        closePhotoLightbox()
+        return
+      }
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault()
+        lightboxStep(-1)
+      }
+      if (event.key === 'ArrowRight') {
+        event.preventDefault()
+        lightboxStep(1)
+      }
+    })
   }
 
   function updateCoordsLabel() {
@@ -284,6 +465,7 @@
   }
 
   function closeAppealDetailsModal() {
+    closePhotoLightbox()
     appealDetailsModal.hidden = true
     document.body.style.overflow = ''
   }
@@ -306,23 +488,19 @@
     appealDetailsDescription.textContent = String(appeal.description || 'Описание не указано')
 
     appealDetailsImages.textContent = ''
-    const images = Array.isArray(appeal.images) ? appeal.images.slice(0, 9) : []
+    const sourceImages = Array.isArray(appeal.images) ? appeal.images.slice(0, 9) : []
+    const imageUrls = sourceImages.length
+      ? sourceImages.map((imageData, index) => imageData.url || createMiniPhotoUrl(index, 360))
+      : [createMiniPhotoUrl(0, 360)]
 
-    if (!images.length) {
-      const placeholder = document.createElement('img')
-      placeholder.className = 'appeal-details-modal__image'
-      placeholder.alt = 'Фото отсутствует'
-      placeholder.src = createMiniPhotoUrl(0, 360)
-      appealDetailsImages.append(placeholder)
-    } else {
-      images.forEach((imageData, index) => {
-        const image = document.createElement('img')
-        image.className = 'appeal-details-modal__image'
-        image.alt = `Фото заявки ${index + 1}`
-        image.src = imageData.url || createMiniPhotoUrl(index, 360)
-        appealDetailsImages.append(image)
-      })
-    }
+    imageUrls.forEach((url, index) => {
+      const image = document.createElement('img')
+      image.className = 'appeal-details-modal__image'
+      image.alt = sourceImages.length ? `Фото заявки ${index + 1}` : 'Фото отсутствует'
+      image.src = url
+      image.addEventListener('click', () => openPhotoLightbox(imageUrls, index))
+      appealDetailsImages.append(image)
+    })
 
     appealDetailsModal.hidden = false
     document.body.style.overflow = 'hidden'
@@ -540,6 +718,8 @@
       window.location.replace('superadmin.html')
       throw new Error('__redirect_admin__')
     }
+
+    return data?.user || null
   }
 
   async function loadCategories() {
@@ -676,6 +856,7 @@
   })
 
   form.addEventListener('submit', submitAppeal)
+  setupPhotoLightbox()
   appealDetailsClose.addEventListener('click', closeAppealDetailsModal)
   appealDetailsModal.addEventListener('click', event => {
     if (event.target === appealDetailsModal || event.target?.classList?.contains('appeal-details-modal__backdrop')) {
@@ -683,7 +864,7 @@
     }
   })
   document.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && !appealDetailsModal.hidden) {
+    if (event.key === 'Escape' && !appealDetailsModal.hidden && (photoLightbox?.hidden ?? true)) {
       closeAppealDetailsModal()
     }
   })
@@ -694,10 +875,14 @@
 
   Promise.resolve()
     .then(() => ensureAuthorized())
-    .then(() => loadCategories())
+    .then(user => {
+      setupProfileBadge(user)
+      return loadCategories()
+    })
     .then(() => loadAppeals())
     .catch(error => {
       if (error?.message === '__redirect_admin__') return
+      setupProfileBadge({})
       setFormVisible(false)
       renderAppealsError(error?.message || 'Ошибка загрузки данных')
     })

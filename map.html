@@ -14,22 +14,64 @@
   </head>
   <body>
     <div class="map-page">
-      <aside class="sidebar" aria-label="Навигация">
-        <button class="sidebar-icon first" type="button" aria-label="Панель">
-          <img src="./icons/aside-slider.svg" alt="Home" class="sidebar-icon">
-        </button>
-        <button class="sidebar-icon" type="button" aria-label="Главная">
-          <img src="./icons/Home.svg" alt="Home" class="sidebar-icon">
-        </button>
-        <button class="sidebar-icon" id="mapMyAppealsBtn" type="button" aria-label="Мои обращения">
-          <img src="./icons/my_appeals.svg" alt="Home" class="sidebar-icon">
-        </button>
-        <button class="sidebar-icon" id="mapLogoutBtn" type="button" aria-label="Выход">
-          <img src="./icons/logout.svg" alt="Выход" class="sidebar-icon">
-        </button>
+      <aside class="sidebar" id="sidebar" aria-label="Навигация">
+        <div class="sidebar-top">
+          <div class="sidebar-head">
+            <button class="sidebar-brand" type="button" aria-label="EcoSignal">
+              <img class="sidebar-brand-icon" src="./icons/Group.svg" alt="" />
+              <span class="sidebar-brand-name">EcoSignal</span>
+            </button>
+            <button
+              class="sidebar-nav-item1"
+              id="sidebarToggle"
+              type="button"
+              aria-label="Развернуть панель"
+              aria-expanded="false"
+            >
+              <img src="./icons/aside-slider.svg" alt="" />
+            </button>
+          </div>
 
-        <div class="sidebar-spacer"></div>
-        <div class="sidebar-avatar" aria-hidden="true"></div>
+          <nav class="sidebar-nav" aria-label="Навигация">
+            <button
+              class="sidebar-nav-item sidebar-nav-item--active"
+              type="button"
+              data-href="map.html"
+              aria-label="Главная"
+              aria-current="page"
+            >
+              <img src="./icons/Home.svg" alt="" />
+              <span class="sidebar-nav-label">Карта</span>
+            </button>
+            <button
+              class="sidebar-nav-item"
+              type="button"
+              data-href="my_appeals.html"
+              aria-label="Мои обращения"
+            >
+              <img src="./icons/my_appeals.svg" alt="" />
+              <span class="sidebar-nav-label">Мои обращения</span>
+            </button>
+            <button
+              class="sidebar-nav-item"
+              type="button"
+              data-action="logout"
+              aria-label="Выход"
+            >
+              <img src="./icons/logout.svg" alt="" />
+              <span class="sidebar-nav-label">Выход</span>
+            </button>
+          </nav>
+        </div>
+
+        <button class="sidebar-profile" type="button" aria-label="Профиль">
+          <span class="sidebar-avatar" id="sidebarAvatar">U</span>
+          <span class="sidebar-profile-meta">
+            <span class="sidebar-profile-name">Профиль</span>
+            <span class="sidebar-profile-level">Пользователь</span>
+          </span>
+          <img class="sidebar-profile-arrow" aria-hidden="true" src="./icons/arrow_down.svg" />
+        </button>
       </aside>
 
       <main class="content">
@@ -151,6 +193,17 @@
         <p id="appealDetailsDescription" class="appeal-details-modal__description"></p>
         <div id="appealDetailsImages" class="appeal-details-modal__images"></div>
       </article>
+    </div>
+
+    <div class="photo-lightbox" id="photoLightbox" hidden>
+      <div class="photo-lightbox__backdrop" id="photoLightboxBackdrop"></div>
+      <button class="photo-lightbox__close" id="photoLightboxClose" type="button" aria-label="Закрыть">×</button>
+      <button class="photo-lightbox__nav photo-lightbox__nav--prev" id="photoLightboxPrev" type="button" aria-label="Предыдущее">‹</button>
+      <div class="photo-lightbox__stage">
+        <img class="photo-lightbox__img" id="photoLightboxImg" alt="" />
+      </div>
+      <button class="photo-lightbox__nav photo-lightbox__nav--next" id="photoLightboxNext" type="button" aria-label="Следующее">›</button>
+      <p class="photo-lightbox__counter" id="photoLightboxCounter" aria-live="polite"></p>
     </div>
     <script src="https://api-maps.yandex.ru/2.1/?apikey=c4b88e0d-3370-4eee-b2cd-7bb4ad66c4af&lang=ru_RU"></script>
     <script src="map.js"></script>

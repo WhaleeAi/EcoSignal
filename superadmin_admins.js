@@ -15,24 +15,13 @@
 
   const organizationMeta = document.getElementById('organizationMeta')
   const statsContainer = document.getElementById('superStats')
-
-  const createAdminForm = document.getElementById('createAdminForm')
-  const createAdminLogin = document.getElementById('createAdminLogin')
-  const createAdminPassword = document.getElementById('createAdminPassword')
-  const createAdminFilial = document.getElementById('createAdminFilial')
-  const createAdminComment = document.getElementById('createAdminComment')
-  const createAdminFeedback = document.getElementById('createAdminFeedback')
-
-  const adminsGrid = document.getElementById('adminsGrid')
-  const actionsGrid = document.getElementById('actionsGrid')
+  const listFeedback = document.getElementById('listFeedback')
+  const assignedAdminsGrid = document.getElementById('assignedAdminsGrid')
 
   const state = {
     user: null,
-    organization: null,
     stats: null,
-    filials: [],
     admins: [],
-    recentRefs: [],
   }
 
   function getInitials(value) {
@@ -67,10 +56,10 @@
     }).format(date)
   }
 
-  function setCreateFeedback(text, isError = false) {
-    if (!createAdminFeedback) return
-    createAdminFeedback.textContent = text
-    createAdminFeedback.classList.toggle('error', isError)
+  function setFeedback(text, isError = false) {
+    if (!listFeedback) return
+    listFeedback.textContent = text
+    listFeedback.classList.toggle('error', isError)
   }
 
   function setSidebarExpanded(expanded) {
@@ -125,10 +114,8 @@
 
     const stats = state.stats || {}
     const items = [
-      { label: 'Филиалы', value: Number(stats.filials_total || 0) },
-      { label: 'Администраторы', value: Number(stats.admins_total || 0) },
-      { label: 'Активные', value: Number(stats.admins_active || 0) },
-      { label: 'Мои действия', value: Number(stats.my_actions_total || 0) },
+      { label: 'Назначено всего', value: Number(stats.appointed_total || 0) },
+      { label: 'Активных', value: Number(stats.appointed_active || 0) },
     ]
 
     statsContainer.textContent = ''
@@ -149,34 +136,15 @@
     })
   }
 
-  function renderFilialSelect() {
-    if (!createAdminFilial) return
-
-    createAdminFilial.textContent = ''
-    const firstOption = document.createElement('option')
-    firstOption.value = ''
-    firstOption.textContent = 'Без привязки к филиалу'
-    createAdminFilial.append(firstOption)
-
-    state.filials
-      .filter(filial => Boolean(filial.is_active))
-      .forEach(filial => {
-        const option = document.createElement('option')
-        option.value = String(filial.id)
-        option.textContent = filial.region ? `${filial.name} (${filial.region})` : filial.name
-        createAdminFilial.append(option)
-      })
-  }
-
   function renderAdmins() {
-    if (!adminsGrid) return
+    if (!assignedAdminsGrid) return
 
-    adminsGrid.textContent = ''
+    assignedAdminsGrid.textContent = ''
     if (!Array.isArray(state.admins) || state.admins.length === 0) {
       const empty = document.createElement('p')
       empty.className = 'super-empty'
-      empty.textContent = 'Администраторы пока не добавлены.'
-      adminsGrid.append(empty)
+      empty.textContent = 'Вы пока никого не назначили.'
+      assignedAdminsGrid.append(empty)
       return
     }
 
@@ -198,71 +166,43 @@
         ? `Филиал: ${admin.filial_name}${admin.filial_region ? `, ${admin.filial_region}` : ''}`
         : 'Филиал: без привязки'
 
-      const createdAt = document.createElement('p')
-      createdAt.className = 'super-admin__meta'
-      createdAt.textContent = `Создан: ${formatDate(admin.created_at)}`
+      const appointedAt = document.createElement('p')
+      appointedAt.className = 'super-admin__meta'
+      appointedAt.textContent = `Назначен: ${formatDate(admin.appointed_at)}`
 
-      const lastLogin = document.createElement('p')
-      lastLogin.className = 'super-admin__meta'
-      lastLogin.textContent = `Последний вход: ${formatDate(admin.last_login_at)}`
+      const lastAction = document.createElement('p')
+      lastAction.className = 'super-admin__meta'
+      lastAction.textContent = `Последнее действие: ${admin.last_action || '—'} (${formatDate(admin.last_action_at)})`
 
-      card.append(title, status, filial, createdAt, lastLogin)
-      adminsGrid.append(card)
-    })
-  }
+      card.append(title, status, filial, appointedAt, lastAction)
 
-  function mapActionType(value) {
-    if (value === 'appointed') return 'Назначение'
-    if (value === 'revoked') return 'Удаление'
-    if (value === 'role_changed') return 'Изменение роли'
-    return String(value || 'Действие')
-  }
+      if (admin.is_active) {
+        const actions = document.createElement('div')
+        actions.className = 'super-admin__actions'
 
-  function renderActions() {
-    if (!actionsGrid) return
+        const removeButton = document.createElement('button')
+        removeButton.type = 'button'
+        removeButton.className = 'super-admin__remove'
+        removeButton.dataset.adminId = String(admin.id)
+        removeButton.textContent = 'Удалить'
 
-    actionsGrid.textContent = ''
-    if (!Array.isArray(state.recentRefs) || state.recentRefs.length === 0) {
-      const empty = document.createElement('p')
-      empty.className = 'super-empty'
-      empty.textContent = 'Последних действий пока нет.'
-      actionsGrid.append(empty)
-      return
-    }
+        actions.append(removeButton)
+        card.append(actions)
+      }
 
-    state.recentRefs.forEach(action => {
-      const card = document.createElement('article')
-      card.className = 'super-action'
-
-      const title = document.createElement('h3')
-      title.className = 'super-action__title'
-      title.textContent = `${mapActionType(action.action_type)}: ${action.target_login || '—'}`
-
-      const filial = document.createElement('p')
-      filial.className = 'super-action__meta'
-      filial.textContent = action.filial_name
-        ? `Филиал: ${action.filial_name}${action.filial_region ? `, ${action.filial_region}` : ''}`
-        : 'Филиал: без привязки'
-
-      const createdAt = document.createElement('p')
-      createdAt.className = 'super-action__meta'
-      createdAt.textContent = `Когда: ${formatDate(action.created_at)}`
-
-      const comment = document.createElement('p')
-      comment.className = 'super-action__meta'
-      comment.textContent = action.comment ? `Комментарий: ${action.comment}` : 'Комментарий: —'
-
-      card.append(title, filial, createdAt, comment)
-      actionsGrid.append(card)
+      assignedAdminsGrid.append(card)
     })
   }
 
   function applyHeader() {
-    if (organizationMeta && state.organization) {
-      organizationMeta.textContent = `Организация: ${state.organization.name} (${state.organization.type})`
+    const user = state.user
+    if (!user) return
+
+    if (organizationMeta) {
+      organizationMeta.textContent = `Организация: ${user.organization_name} (${user.organization_type})`
     }
 
-    const displayName = getDisplayName(state.user)
+    const displayName = getDisplayName(user)
     if (sidebarName) sidebarName.textContent = displayName
     if (sidebarAvatar) sidebarAvatar.textContent = getInitials(displayName)
     if (sidebarRole) sidebarRole.textContent = 'superadmin'
@@ -271,9 +211,7 @@
   function renderAll() {
     applyHeader()
     renderStats()
-    renderFilialSelect()
     renderAdmins()
-    renderActions()
   }
 
   async function fetchJson(url, options = {}) {
@@ -323,61 +261,47 @@
     state.user = user
   }
 
-  async function loadDashboard() {
-    const data = await fetchJson('backend/superadmin_dashboard.php')
-    state.organization = data.organization || null
+  async function loadPageData() {
+    const data = await fetchJson('backend/superadmin_admin_refs.php')
+    state.user = data.user || state.user
     state.stats = data.stats || null
-    state.filials = Array.isArray(data.filials) ? data.filials : []
     state.admins = Array.isArray(data.admins) ? data.admins : []
-    state.recentRefs = Array.isArray(data.recent_refs) ? data.recent_refs : []
     renderAll()
   }
 
-  function setupCreateAdminForm() {
-    if (!createAdminForm) return
+  async function deleteAdmin(adminId) {
+    await fetchJson('backend/superadmin_delete_admin.php', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ admin_id: Number(adminId) }),
+    })
+  }
 
-    createAdminForm.addEventListener('submit', async event => {
-      event.preventDefault()
+  function setupDeleteActions() {
+    if (!assignedAdminsGrid) return
 
-      const login = createAdminLogin?.value.trim() || ''
-      const password = createAdminPassword?.value.trim() || ''
-      const filialRaw = createAdminFilial?.value || ''
-      const comment = createAdminComment?.value.trim() || ''
+    assignedAdminsGrid.addEventListener('click', async event => {
+      const target = event.target
+      if (!(target instanceof HTMLElement)) return
 
-      if (!login || !password) {
-        setCreateFeedback('Заполните логин и пароль', true)
-        return
-      }
+      const button = target.closest('button[data-admin-id]')
+      if (!button) return
 
-      const submitButton = createAdminForm.querySelector('button[type="submit"]')
-      if (submitButton instanceof HTMLButtonElement) {
-        submitButton.disabled = true
-      }
+      const adminId = Number(button.dataset.adminId || 0)
+      if (!adminId) return
 
-      setCreateFeedback('Добавление администратора...')
+      const confirmed = window.confirm('Удалить этого администратора? Он будет деактивирован.')
+      if (!confirmed) return
+
+      button.disabled = true
+      setFeedback('Удаление администратора...')
 
       try {
-        const payload = {
-          login,
-          password,
-          comment,
-        }
-
-        if (filialRaw) {
-          payload.filial_id = Number(filialRaw)
-        }
-
-        await fetchJson('backend/superadmin_create_admin.php', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-        })
-
-        createAdminForm.reset()
-        setCreateFeedback('Администратор добавлен')
-        await loadDashboard()
+        await deleteAdmin(adminId)
+        setFeedback('Администратор удален')
+        await loadPageData()
       } catch (error) {
         if (
           error?.message === '__redirect_login__' ||
@@ -386,22 +310,20 @@
         ) {
           return
         }
-        setCreateFeedback(error.message || 'Не удалось добавить администратора', true)
+        setFeedback(error.message || 'Не удалось удалить администратора', true)
       } finally {
-        if (submitButton instanceof HTMLButtonElement) {
-          submitButton.disabled = false
-        }
+        button.disabled = false
       }
     })
   }
 
   async function init() {
     setupSidebar()
-    setupCreateAdminForm()
+    setupDeleteActions()
 
     try {
       await ensureSuperadmin()
-      await loadDashboard()
+      await loadPageData()
     } catch (error) {
       if (
         error?.message === '__redirect_login__' ||
@@ -411,7 +333,7 @@
         return
       }
 
-      setCreateFeedback(error.message || 'Не удалось загрузить панель superadmin', true)
+      setFeedback(error.message || 'Не удалось загрузить страницу', true)
     }
   }
 

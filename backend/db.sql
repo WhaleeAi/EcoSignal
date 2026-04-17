@@ -84,6 +84,47 @@ CREATE TABLE user_notifications (
     PRIMARY KEY (user_id, notification_id)
 );
 
+CREATE TABLE organizations (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    org_type VARCHAR(32) NOT NULL CHECK (org_type IN ('federal', 'regional', 'municipal')),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE filials (
+    id BIGSERIAL PRIMARY KEY,
+    organization_id BIGINT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    address TEXT NOT NULL,
+    hotline_phone VARCHAR(50),
+    email VARCHAR(255),
+    region VARCHAR(255),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    UNIQUE (organization_id, name)
+);
+
+CREATE TABLE org_admins (
+    id BIGSERIAL PRIMARY KEY,
+    organization_id BIGINT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    filial_id BIGINT REFERENCES filials(id) ON DELETE SET NULL,
+    login VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(32) NOT NULL CHECK (role IN ('superadmin', 'admin')),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    last_login_at TIMESTAMP
+);
+
+CREATE TABLE org_adm_refs (
+    id BIGSERIAL PRIMARY KEY,
+    actor_admin_id BIGINT NOT NULL REFERENCES org_admins(id) ON DELETE RESTRICT,
+    target_admin_id BIGINT NOT NULL REFERENCES org_admins(id) ON DELETE RESTRICT,
+    action_type VARCHAR(32) NOT NULL CHECK (action_type IN ('appointed', 'revoked', 'role_changed')),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    comment TEXT
+);
+
 -- ----------------------------------------
 -- Тестовые данные для карты (можно запускать повторно)
 -- ----------------------------------------
@@ -180,3 +221,115 @@ WHERE NOT EXISTS (
       AND a.latitude = sd.latitude
       AND a.longitude = sd.longitude
 );
+
+BEGIN;
+
+-- Для crypt()/gen_salt()
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- 1) Организации
+INSERT INTO organizations (name, org_type)
+VALUES
+    ('Росприроднадзор', 'federal'),
+    ('Минприроды РФ', 'federal'),
+    ('Рослесхоз', 'federal'),
+    ('Департамент природопользования', 'regional')
+ON CONFLICT (name) DO UPDATE
+SET org_type = EXCLUDED.org_type;
+
+-- 2) Филиалы (пока только Москва; адреса реальные)
+WITH orgs AS (
+    SELECT id, name
+    FROM organizations
+    WHERE name IN (
+        'Росприроднадзор',
+        'Минприроды РФ',
+        'Рослесхоз',
+        'Департамент природопользования'
+    )
+)
+INSERT INTO filials (
+    organization_id,
+    name,
+    address,
+    hotline_phone,
+    email,
+    region,
+    is_active
+)
+SELECT
+    o.id,
+    f.name,
+    f.address,
+    f.hotline_phone,
+    f.email,
+    'Москва',
+    TRUE
+FROM orgs o
+JOIN (
+    VALUES
+        ('Росприроднадзор', 'Центральная приемная', 'Москва, ул. Большая Грузинская, д. 4/6', '+7 (495) 000-10-01', 'office@rpn.local'),
+        ('Росприроднадзор', 'Северный отдел',      'Москва, ул. Правды, д. 24, стр. 2',        '+7 (495) 000-10-02', 'north@rpn.local'),
+
+        ('Минприроды РФ',    'Центральная приемная', 'Москва, ул. Большая Грузинская, д. 4/6', '+7 (495) 000-20-01', 'office@minprirody.local'),
+        ('Минприроды РФ',    'Экспертный отдел',     'Москва, ул. Новый Арбат, д. 19',          '+7 (495) 000-20-02', 'expert@minprirody.local'),
+
+        ('Рослесхоз',        'Центральный аппарат',  'Москва, ул. Пятницкая, д. 59/19',         '+7 (495) 000-30-01', 'office@rosleshoz.local'),
+        ('Рослесхоз',        'Отдел мониторинга',    'Москва, Варшавское шоссе, д. 39А',        '+7 (495) 000-30-02', 'monitor@rosleshoz.local'),
+
+        ('Департамент природопользования', 'Центральная приемная', 'Москва, ул. Новый Арбат, д. 11, корп. 1', '+7 (495) 000-40-01', 'office@dpp.local'),
+        ('Департамент природопользования', 'Южный сектор',         'Москва, ул. Автозаводская, д. 23, корп. 7', '+7 (495) 000-40-02', 'south@dpp.local')
+) AS f(org_name, name, address, hotline_phone, email)
+    ON f.org_name = o.name
+ON CONFLICT (organization_id, name) DO UPDATE
+SET
+    address = EXCLUDED.address,
+    hotline_phone = EXCLUDED.hotline_phone,
+    email = EXCLUDED.email,
+    region = EXCLUDED.region,
+    is_active = EXCLUDED.is_active;
+
+-- 3) Суперадмины (по одному на организацию)
+WITH orgs AS (
+    SELECT id, name
+    FROM organizations
+    WHERE name IN (
+        'Росприроднадзор',
+        'Минприроды РФ',
+        'Рослесхоз',
+        'Департамент природопользования'
+    )
+)
+INSERT INTO org_admins (
+    organization_id,
+    filial_id,
+    login,
+    password_hash,
+    role,
+    is_active
+)
+SELECT
+    o.id,
+    NULL,
+    s.login,
+    crypt(s.password_plain, gen_salt('bf', 10)),
+    'superadmin',
+    TRUE
+FROM orgs o
+JOIN (
+    VALUES
+        ('Росприроднадзор',              'superadmin_rpn',        'Rpn#2026!'),
+        ('Минприроды РФ',                'superadmin_minprirody', 'MinPriroda#2026!'),
+        ('Рослесхоз',                    'superadmin_rosleshoz',  'RosLes#2026!'),
+        ('Департамент природопользования','superadmin_dpp',       'Dpp#2026!')
+) AS s(org_name, login, password_plain)
+    ON s.org_name = o.name
+ON CONFLICT (login) DO UPDATE
+SET
+    organization_id = EXCLUDED.organization_id,
+    filial_id = EXCLUDED.filial_id,
+    password_hash = EXCLUDED.password_hash,
+    role = EXCLUDED.role,
+    is_active = TRUE;
+
+COMMIT;

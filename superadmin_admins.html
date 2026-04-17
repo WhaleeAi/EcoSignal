@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EcoSignal | РЎСѓРїРµСЂР°РґРјРёРЅ</title>
+    <title>EcoSignal | РќР°Р·РЅР°С‡РµРЅРЅС‹Рµ Р°РґРјРёРЅС‹</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -33,16 +33,16 @@
           </div>
 
           <nav class="super-sidebar__nav" aria-label="РќР°РІРёРіР°С†РёСЏ">
-            <button
-              class="super-sidebar__item super-sidebar__item--active"
-              type="button"
-              data-href="superadmin.html"
-              aria-current="page"
-            >
+            <button class="super-sidebar__item" type="button" data-href="superadmin.html">
               <img src="./icons/Home.svg" alt="" />
               <span class="super-sidebar__label">РџР°РЅРµР»СЊ</span>
             </button>
-            <button class="super-sidebar__item" type="button" data-href="superadmin_admins.html">
+            <button
+              class="super-sidebar__item super-sidebar__item--active"
+              type="button"
+              data-href="superadmin_admins.html"
+              aria-current="page"
+            >
               <img src="./icons/my_appeals.svg" alt="" />
               <span class="super-sidebar__label">РќР°Р·РЅР°С‡РµРЅРЅС‹Рµ Р°РґРјРёРЅС‹</span>
             </button>
@@ -65,46 +65,24 @@
         </button>
       </aside>
 
-      <main class="super-content super-content--stacked">
+      <main class="super-content">
         <header class="super-header">
-          <h1 class="super-title">РџР°РЅРµР»СЊ СЃСѓРїРµСЂР°РґРјРёРЅР°</h1>
+          <h1 class="super-title">РќР°Р·РЅР°С‡РµРЅРЅС‹Рµ РјРЅРѕР№ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂС‹</h1>
           <p class="super-subtitle" id="organizationMeta">РћСЂРіР°РЅРёР·Р°С†РёСЏ: вЂ”</p>
         </header>
 
         <section class="super-stats" id="superStats"></section>
 
-        <section class="super-block super-block--form">
-          <div class="super-block__head">
-            <h2>Р”РѕР±Р°РІРёС‚СЊ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°</h2>
-          </div>
-          <form class="super-form" id="createAdminForm">
-            <input type="text" id="createAdminLogin" placeholder="Р›РѕРіРёРЅ" required />
-            <input type="password" id="createAdminPassword" placeholder="РџР°СЂРѕР»СЊ (РјРёРЅ. 6 СЃРёРјРІРѕР»РѕРІ)" minlength="6" required />
-            <select id="createAdminFilial">
-              <option value="">Р‘РµР· РїСЂРёРІСЏР·РєРё Рє С„РёР»РёР°Р»Сѓ</option>
-            </select>
-            <input type="text" id="createAdminComment" placeholder="РљРѕРјРјРµРЅС‚Р°СЂРёР№ (РЅРµРѕР±СЏР·Р°С‚РµР»СЊРЅРѕ)" />
-            <button type="submit">Р”РѕР±Р°РІРёС‚СЊ admin</button>
-          </form>
-          <p class="super-feedback" id="createAdminFeedback"></p>
-        </section>
-
         <section class="super-block">
           <div class="super-block__head">
-            <h2>РўРµРєСѓС‰РёРµ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂС‹</h2>
+            <h2>РЎРїРёСЃРѕРє Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂРѕРІ</h2>
           </div>
-          <div class="super-grid super-grid--single-column" id="adminsGrid"></div>
-        </section>
-
-        <section class="super-block">
-          <div class="super-block__head">
-            <h2>РџРѕСЃР»РµРґРЅРёРµ РґРµР№СЃС‚РІРёСЏ</h2>
-          </div>
-          <div class="super-grid super-grid--single-column" id="actionsGrid"></div>
+          <p class="super-feedback" id="listFeedback"></p>
+          <div class="super-grid" id="assignedAdminsGrid"></div>
         </section>
       </main>
     </div>
 
-    <script src="superadmin.js"></script>
+    <script src="superadmin_admins.js"></script>
   </body>
 </html>

@@ -11,7 +11,6 @@
   const appealsSection = document.getElementById('appealsSection')
   const sidebar = document.getElementById('sidebar')
   const sidebarToggle = document.getElementById('sidebarToggle')
-  const sidebarSpacer = document.querySelector('.sidebar-spacer')
   const sidebarAvatar = document.getElementById('sidebarAvatar')
   const sidebarProfileName = document.querySelector('.sidebar-profile-name')
   const sidebarProfileLevel = document.querySelector('.sidebar-profile-level')
@@ -808,8 +807,8 @@
   function setupSidebarToggle() {
     if (!sidebar || !sidebarToggle) return
 
-    const toggleSidebar = () => {
-      const expanded = sidebar.classList.toggle('sidebar--expanded')
+    const setSidebarExpanded = expanded => {
+      sidebar.classList.toggle('sidebar--expanded', expanded)
       sidebarToggle.setAttribute('aria-expanded', String(expanded))
       sidebarToggle.setAttribute(
         'aria-label',
@@ -817,8 +816,13 @@
       )
     }
 
+    setSidebarExpanded(sidebar.classList.contains('sidebar--expanded'))
+
+    const toggleSidebar = () => {
+      setSidebarExpanded(!sidebar.classList.contains('sidebar--expanded'))
+    }
+
     sidebarToggle.addEventListener('click', toggleSidebar)
-    sidebarSpacer?.addEventListener('click', toggleSidebar)
     sidebar.addEventListener('click', event => {
       const target = event.target
       if (!(target instanceof Element)) return

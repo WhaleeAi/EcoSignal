@@ -1,11 +1,11 @@
-﻿:root {
+:root {
   --font-family: "Roboto Flex", sans-serif;
   --heading-family: "Roboto Slab", serif;
-  --bg-main: #f5f4ed;
+  --bg-main: #F8F8F6;
   --bg-card: #ffffff;
   --text-main: #141413;
   --text-secondary: #5e5d59;
-  --stroke-main: #b8b8b5;
+  --stroke-main: #b8b8b5a6;
 }
 
 * {
@@ -46,7 +46,7 @@ body {
 
 .super-sidebar--expanded {
   --sidebar-edge: 12px;
-  width: 250px;
+  width: 260px;
 }
 
 .super-sidebar__top {
@@ -133,16 +133,12 @@ body {
 }
 
 .super-sidebar__item--active {
-  background: #f0eee6;
+  background: #EFEEEB;
 }
 
 .super-sidebar__label {
   font-size: 14px;
   white-space: nowrap;
-}
-
-.super-sidebar__nav > .super-sidebar__item:last-of-type {
-  margin-top: 12px;
 }
 
 .super-sidebar__spacer {
@@ -183,7 +179,7 @@ body {
 }
 
 .super-sidebar__profile-name {
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1.1;
 }
 
@@ -216,7 +212,7 @@ body {
 .super-sidebar--expanded .super-sidebar__brand-name,
 .super-sidebar--expanded .super-sidebar__profile-arrow,
 .super-sidebar--expanded .super-sidebar__brand-icon {
-  max-width: 220px;
+  max-width: 230px;
   opacity: 1;
 }
 
@@ -232,7 +228,7 @@ body {
 .super-sidebar__toggle:hover,
 .super-sidebar__item:hover,
 .super-sidebar__profile:hover {
-  background: #f0eee6;
+  background: #EFEEEB;
 }
 
 .super-content {
@@ -243,6 +239,16 @@ body {
   flex-direction: column;
   gap: 14px;
   overflow-y: auto;
+}
+
+.super-content--stacked .super-block {
+  width: 100%;
+}
+
+.super-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .super-title,
@@ -257,9 +263,14 @@ body {
   line-height: 1.1;
 }
 
+.super-subtitle {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
 .super-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, max-content));
+  grid-template-columns: repeat(auto-fit, minmax(170px, max-content));
   gap: 12px;
 }
 
@@ -275,13 +286,15 @@ body {
 }
 
 .super-stat__value {
-  font-size: 44px;
+  margin: 0;
+  font-size: 40px;
   line-height: 1;
   font-weight: 500;
 }
 
 .super-stat__label {
-  font-size: 16px;
+  margin: 0;
+  font-size: 15px;
   color: var(--text-secondary);
 }
 
@@ -297,15 +310,15 @@ body {
 
 .super-form {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 10px;
   align-items: center;
 }
 
 .super-form input,
+.super-form select,
 .super-form button,
-.super-request__action,
-.super-request__action--ghost {
+.super-admin__remove {
   height: 42px;
   border: 1px solid var(--stroke-main);
   border-radius: 10px;
@@ -313,28 +326,27 @@ body {
   font-size: 14px;
 }
 
-.super-form input {
+.super-form input,
+.super-form select {
   padding: 0 12px;
   color: var(--text-main);
+  background: #fff;
 }
 
 .super-form button,
-.super-request__action {
-  background: #f0eee6;
+.super-admin__remove {
+  background: #EFEEEB;
   color: var(--text-main);
   cursor: pointer;
 }
 
-.super-request__action--ghost {
-  background: #fff;
-  color: var(--text-main);
-  cursor: pointer;
+.super-admin__remove {
+  width: 100%;
 }
 
 .super-form button:hover,
-.super-request__action:hover,
-.super-request__action--ghost:hover {
-  background: #ece8db;
+.super-admin__remove:hover {
+  background: #dbdad6;
 }
 
 .super-feedback {
@@ -354,7 +366,11 @@ body {
   gap: 12px;
 }
 
-.super-request,
+.super-grid--single-column {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.super-action,
 .super-admin {
   border: 1px solid var(--stroke-main);
   border-radius: 12px;
@@ -365,24 +381,38 @@ body {
   gap: 8px;
 }
 
-.super-request__title,
-.super-admin__title {
+.super-admin__title,
+.super-action__title {
   margin: 0;
   font-size: 16px;
   line-height: 1.2;
 }
 
-.super-request__meta,
-.super-admin__meta {
+.super-admin__meta,
+.super-action__meta {
   margin: 0;
   font-size: 13px;
   color: var(--text-secondary);
   line-height: 1.2;
 }
 
-.super-request__actions {
-  display: flex;
-  gap: 8px;
+.super-admin__status {
+  font-size: 12px;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 4px 10px;
+  border: 1px solid var(--stroke-main);
+  color: var(--text-secondary);
+}
+
+.super-admin__status.is-active {
+  color: #2a6f1f;
+  border-color: #8bc78a;
+  background: #f4fff3;
+}
+
+.super-admin__actions {
+  margin-top: 2px;
 }
 
 .super-empty {
