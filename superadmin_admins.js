@@ -1,6 +1,5 @@
-;(() => {
+﻿;(() => {
   const token = localStorage.getItem('token')
-
   if (!token) {
     window.location.replace('login.html')
     return
@@ -8,7 +7,6 @@
 
   const sidebar = document.getElementById('superSidebar')
   const sidebarToggle = document.getElementById('superSidebarToggle')
-  const sidebarSpacer = document.getElementById('superSidebarSpacer')
   const sidebarAvatar = document.getElementById('superSidebarAvatar')
   const sidebarName = document.getElementById('superSidebarName')
   const sidebarRole = document.getElementById('superSidebarRole')
@@ -56,6 +54,10 @@
     }).format(date)
   }
 
+  function mapRole(role) {
+    return role === 'superadmin' ? 'superadmin' : 'admin'
+  }
+
   function setFeedback(text, isError = false) {
     if (!listFeedback) return
     listFeedback.textContent = text
@@ -83,7 +85,7 @@
     }
 
     sidebarToggle.addEventListener('click', toggleSidebar)
-    sidebarSpacer?.addEventListener('click', toggleSidebar)
+
     sidebar.addEventListener('click', event => {
       const target = event.target
       if (!(target instanceof Element)) return
@@ -116,6 +118,7 @@
     const items = [
       { label: 'Назначено всего', value: Number(stats.appointed_total || 0) },
       { label: 'Активных', value: Number(stats.appointed_active || 0) },
+      { label: 'Удаленных', value: Number(stats.appointed_inactive || 0) },
     ]
 
     statsContainer.textContent = ''
@@ -136,11 +139,19 @@
     })
   }
 
+  function createAdminMetaChip(text) {
+    const chip = document.createElement('span')
+    chip.className = 'super-admin__meta'
+    chip.textContent = text
+    chip.title = text
+    return chip
+  }
+
   function renderAdmins() {
     if (!assignedAdminsGrid) return
 
     assignedAdminsGrid.textContent = ''
-    if (!Array.isArray(state.admins) || state.admins.length === 0) {
+    if (!state.admins.length) {
       const empty = document.createElement('p')
       empty.className = 'super-empty'
       empty.textContent = 'Вы пока никого не назначили.'
@@ -152,29 +163,38 @@
       const card = document.createElement('article')
       card.className = 'super-admin'
 
+      const top = document.createElement('div')
+      top.className = 'super-admin__top'
+
+      const left = document.createElement('div')
+      left.className = 'super-admin__left'
+
       const title = document.createElement('h3')
       title.className = 'super-admin__title'
-      title.textContent = String(admin.login || 'Без логина')
+      title.textContent = admin.login || 'Без логина'
 
       const status = document.createElement('span')
       status.className = `super-admin__status${admin.is_active ? ' is-active' : ''}`
       status.textContent = admin.is_active ? 'active' : 'inactive'
 
-      const filial = document.createElement('p')
-      filial.className = 'super-admin__meta'
-      filial.textContent = admin.filial_name
-        ? `Филиал: ${admin.filial_name}${admin.filial_region ? `, ${admin.filial_region}` : ''}`
-        : 'Филиал: без привязки'
+      left.append(title, status)
 
-      const appointedAt = document.createElement('p')
-      appointedAt.className = 'super-admin__meta'
-      appointedAt.textContent = `Назначен: ${formatDate(admin.appointed_at)}`
+      const metaWrap = document.createElement('div')
+      metaWrap.className = 'super-admin__meta-wrap'
+      metaWrap.append(
+        createAdminMetaChip(`Роль: ${mapRole(admin.role)}`),
+        createAdminMetaChip(`Организация: ${admin.organization_name || '—'}`),
+        createAdminMetaChip(
+          admin.filial_name
+            ? `Филиал: ${admin.filial_name}${admin.filial_region ? `, ${admin.filial_region}` : ''}`
+            : 'Филиал: без привязки'
+        ),
+        createAdminMetaChip(`Назначен: ${formatDate(admin.appointed_at)}`),
+        createAdminMetaChip(`Последнее действие: ${admin.last_action || '—'}`)
+      )
 
-      const lastAction = document.createElement('p')
-      lastAction.className = 'super-admin__meta'
-      lastAction.textContent = `Последнее действие: ${admin.last_action || '—'} (${formatDate(admin.last_action_at)})`
-
-      card.append(title, status, filial, appointedAt, lastAction)
+      top.append(left, metaWrap)
+      card.append(top)
 
       if (admin.is_active) {
         const actions = document.createElement('div')
@@ -195,14 +215,13 @@
   }
 
   function applyHeader() {
-    const user = state.user
-    if (!user) return
+    if (!state.user) return
 
     if (organizationMeta) {
-      organizationMeta.textContent = `Организация: ${user.organization_name} (${user.organization_type})`
+      organizationMeta.textContent = `Организация: ${state.user.organization_name} (${state.user.organization_type})`
     }
 
-    const displayName = getDisplayName(user)
+    const displayName = getDisplayName(state.user)
     if (sidebarName) sidebarName.textContent = displayName
     if (sidebarAvatar) sidebarAvatar.textContent = getInitials(displayName)
     if (sidebarRole) sidebarRole.textContent = 'superadmin'
@@ -249,7 +268,7 @@
     }
 
     if (user.role === 'admin') {
-      window.location.replace('admin.html')
+      window.location.replace(user.auth_source === 'org_admins' ? 'agent.html' : 'admin.html')
       throw new Error('__redirect_admin__')
     }
 

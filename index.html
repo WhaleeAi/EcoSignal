@@ -336,11 +336,14 @@
 
 					const data = await response.json()
 					const userRole = data?.user?.role
+					const authSource = data?.user?.auth_source
 					const nextPage =
 						userRole === 'superadmin'
 							? 'superadmin.html'
 							: userRole === 'admin'
-								? 'admin.html'
+								? authSource === 'org_admins'
+									? 'agent.html'
+									: 'admin.html'
 								: 'map.html'
 					window.location.replace(nextPage)
 				} catch (error) {

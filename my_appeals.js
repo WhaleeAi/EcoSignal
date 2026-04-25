@@ -29,6 +29,11 @@
   const modalCarouselPrev = document.getElementById('appealModalCarouselPrev')
   const modalCarouselNext = document.getElementById('appealModalCarouselNext')
   const modalDescription = document.getElementById('appealModalDescription')
+  const modalStatus = document.getElementById('appealModalStatus')
+  const modalOrganization = document.getElementById('appealModalOrganization')
+  const modalFilial = document.getElementById('appealModalFilial')
+  const modalResponsible = document.getElementById('appealModalResponsible')
+  const modalAssignmentNote = document.getElementById('appealModalAssignmentNote')
   const modalPriorityRadios = document.querySelectorAll('input[name="appealModalPriority"]')
   const modalAgency = document.getElementById('appealModalAgency')
   const modalAgencyTrigger = document.getElementById('appealModalAgencyTrigger')
@@ -46,6 +51,13 @@
   const photoLightboxStage = document.querySelector('.photo-lightbox__stage')
 
   const modalMessage = document.getElementById('appealModalMessage')
+  const chatDrawer = document.getElementById('appealChat')
+  const chatTitle = document.getElementById('appealChatTitle')
+  const chatEmpty = document.getElementById('appealChatEmpty')
+  const chatList = document.getElementById('appealChatList')
+  const chatComposer = document.getElementById('appealChatComposer')
+  const chatInput = document.getElementById('appealChatInput')
+  const chatSend = document.getElementById('appealChatSend')
 
   const MODAL_PHOTO_SIZE = 180
 
@@ -63,9 +75,18 @@
     ['#f1c8cd', '#e3a8b1'],
   ]
 
+  const STATUS_LABELS = {
+    pending: 'Новая',
+    confirmed: 'Подтверждена',
+    in_progress: 'В работе',
+    resolved: 'Решена',
+    rejected: 'Отклонена',
+  }
+
   const state = {
     appealsById: new Map(),
     currentAppealId: null,
+    detailRequestId: 0,
   }
 
   const lightboxState = {
@@ -477,6 +498,106 @@
     modalMessage.classList.toggle('error', isError)
   }
 
+  function setChatComposerDisabled(disabled) {
+    if (chatInput) chatInput.disabled = disabled
+    if (chatSend) chatSend.disabled = disabled
+  }
+
+  function resizeChatInput() {
+    if (!chatInput) return
+    chatInput.style.height = 'auto'
+    chatInput.style.height = `${Math.min(chatInput.scrollHeight, 118)}px`
+  }
+
+  function formatDateTime(value) {
+    if (!value) return '—'
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return String(value)
+    return new Intl.DateTimeFormat('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(date)
+  }
+
+  function renderChat(messages) {
+    if (!chatList || !chatEmpty) return
+
+    chatList.textContent = ''
+    const list = Array.isArray(messages) ? messages : []
+    chatEmpty.hidden = list.length > 0
+
+    list.forEach(message => {
+      const item = document.createElement('article')
+      item.className = 'agent-chat__message'
+      if (message.is_own) item.classList.add('agent-chat__message--own')
+
+      const head = document.createElement('div')
+      head.className = 'agent-chat__message-head'
+
+      const author = document.createElement('p')
+      author.className = 'agent-chat__message-author'
+      author.textContent = String(message.sender_name || (message.sender_type === 'agent' ? 'Агент' : 'Вы'))
+
+      const time = document.createElement('p')
+      time.className = 'agent-chat__message-time'
+      time.textContent = formatDateTime(message.created_at)
+
+      const text = document.createElement('p')
+      text.className = 'agent-chat__message-text'
+      text.textContent = String(message.message || '')
+
+      head.append(author, time)
+      item.append(head, text)
+      chatList.append(item)
+    })
+
+    chatList.parentElement?.scrollTo({
+      top: chatList.parentElement.scrollHeight,
+      behavior: 'auto',
+    })
+  }
+
+  function setPanelsOpen(open) {
+    modal?.classList.toggle('appeal-drawer--open', open)
+    chatDrawer?.classList.toggle('agent-chat-drawer--open', open)
+    modal?.setAttribute('aria-hidden', String(!open))
+    chatDrawer?.setAttribute('aria-hidden', String(!open))
+  }
+
+  function setAssignmentInfo(appeal) {
+    const statusText = STATUS_LABELS[String(appeal?.status || '')] || '—'
+    if (modalStatus) modalStatus.textContent = statusText
+
+    const assignment = appeal?.assignment || null
+    if (!assignment) {
+      if (modalOrganization) modalOrganization.textContent = 'Орган не назначен'
+      if (modalFilial) modalFilial.textContent = 'Филиал не назначен'
+      if (modalResponsible) modalResponsible.textContent = 'Ответственный не назначен'
+      if (modalAssignmentNote) modalAssignmentNote.textContent = 'Назначение по этой заявке пока не выполнено.'
+      return
+    }
+
+    if (modalOrganization) {
+      modalOrganization.textContent = assignment.organization_name || 'Орган не назначен'
+    }
+    if (modalFilial) {
+      modalFilial.textContent = assignment.filial_name
+        ? `${assignment.filial_name}${assignment.filial_region ? ` (${assignment.filial_region})` : ''}`
+        : 'Филиал не назначен'
+    }
+    if (modalResponsible) {
+      modalResponsible.textContent = assignment.responsible_org_admin_login || 'Ответственный не назначен'
+    }
+    if (modalAssignmentNote) {
+      modalAssignmentNote.textContent = assignment.assigned_at
+        ? `Назначена: ${formatDateTime(assignment.assigned_at)}.`
+        : ''
+    }
+  }
+
   function updateCarouselArrowState() {
     if (!modalCarousel) return
     const maxScroll = modalCarousel.scrollWidth - modalCarousel.clientWidth
@@ -595,12 +716,8 @@
     updateCarouselArrowState()
   }
 
-  function openAppealModal(appealId) {
-    if (!modal) return
-    const appeal = state.appealsById.get(String(appealId))
-    if (!appeal) return
-
-    state.currentAppealId = Number(appeal.id)
+  function renderAppealModalData(appeal) {
+    if (!modal || !appeal) return
 
     if (modalTitle) {
       modalTitle.textContent = `Заявка #${appeal.id}`
@@ -654,28 +771,148 @@
     syncAgencyDisplayFromSelect()
     closeAgencyDropdown()
 
+    setAssignmentInfo(appeal)
     setModalMessage('')
-    modal.classList.add('appeal-drawer--open')
-    modal.setAttribute('aria-hidden', 'false')
+  }
+
+  async function fetchAppealDetails(appealId) {
+    const response = await fetch(`backend/user_appeal_details.php?appeal_id=${encodeURIComponent(appealId)}`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    const data = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Не удалось загрузить заявку')
+    }
+
+    return data
+  }
+
+  async function sendAppealMessage(appealId, message) {
+    const response = await fetch('backend/user_appeal_message.php', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ appeal_id: appealId, message }),
+    })
+    const data = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Не удалось отправить сообщение')
+    }
+
+    return data
+  }
+
+  async function openAppealModal(appealId) {
+    if (!modal) return
+
+    const numericAppealId = Number(appealId)
+    const requestId = ++state.detailRequestId
+    const cachedAppeal = state.appealsById.get(String(appealId))
+
+    state.currentAppealId = numericAppealId
+    setPanelsOpen(true)
+    setModalMessage('')
+    setChatComposerDisabled(true)
+    renderChat([])
+    if (chatTitle) chatTitle.textContent = `Чат по заявке #${numericAppealId}`
+
+    if (cachedAppeal) {
+      renderAppealModalData(cachedAppeal)
+    }
+
+    try {
+      const data = await fetchAppealDetails(numericAppealId)
+      if (requestId !== state.detailRequestId || state.currentAppealId !== numericAppealId) return
+
+      const appeal = data?.appeal
+      if (!appeal) {
+        throw new Error('Заявка не найдена')
+      }
+
+      const mergedAppeal = {
+        ...(cachedAppeal || {}),
+        ...appeal,
+      }
+      state.appealsById.set(String(mergedAppeal.id), mergedAppeal)
+
+      renderAppealModalData(mergedAppeal)
+      renderChat(data?.chat || [])
+      if (chatTitle) chatTitle.textContent = `Чат по заявке #${mergedAppeal.id}`
+      if (chatInput) chatInput.value = ''
+      resizeChatInput()
+      setChatComposerDisabled(false)
+    } catch (error) {
+      if (requestId !== state.detailRequestId) return
+      setModalMessage(error?.message || 'Не удалось загрузить заявку')
+      setChatComposerDisabled(false)
+    }
   }
 
   function closeAppealModal() {
     if (!modal) return
     closeAgencyDropdown()
-    modal.classList.remove('appeal-drawer--open')
-    modal.setAttribute('aria-hidden', 'true')
+    state.detailRequestId += 1
+    setPanelsOpen(false)
     state.currentAppealId = null
     setModalMessage('')
+    renderChat([])
+    if (chatInput) chatInput.value = ''
+    resizeChatInput()
   }
 
   async function saveAppealModal() {
     closeAppealModal()
   }
 
+  async function sendChatMessage() {
+    const appealId = state.currentAppealId
+    const message = String(chatInput?.value || '').trim()
+    if (!appealId || !message) return
+
+    setChatComposerDisabled(true)
+    try {
+      await sendAppealMessage(appealId, message)
+      if (chatInput) chatInput.value = ''
+      resizeChatInput()
+
+      const data = await fetchAppealDetails(appealId)
+      if (state.currentAppealId !== appealId) return
+      renderChat(data?.chat || [])
+      if (data?.appeal) {
+        const cachedAppeal = state.appealsById.get(String(appealId)) || {}
+        const mergedAppeal = { ...cachedAppeal, ...data.appeal }
+        state.appealsById.set(String(appealId), mergedAppeal)
+        renderAppealModalData(mergedAppeal)
+      }
+      setModalMessage('')
+    } catch (error) {
+      setModalMessage(error?.message || 'Не удалось отправить сообщение')
+    } finally {
+      if (state.currentAppealId === appealId) {
+        setChatComposerDisabled(false)
+      }
+    }
+  }
+
   function setupModalHandlers() {
     modalClose?.addEventListener('click', closeAppealModal)
     modalCancel?.addEventListener('click', closeAppealModal)
     modalSave?.addEventListener('click', saveAppealModal)
+    chatComposer?.addEventListener('submit', event => {
+      event.preventDefault()
+      sendChatMessage()
+    })
+    chatInput?.addEventListener('input', resizeChatInput)
+    chatInput?.addEventListener('keydown', event => {
+      if (event.key !== 'Enter' || event.shiftKey) return
+      event.preventDefault()
+      sendChatMessage()
+    })
 
     document.addEventListener('keydown', event => {
       if (event.key !== 'Escape') return

@@ -9,13 +9,12 @@ require_once __DIR__ . '/helpers.php';
 allowCors();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    jsonResponse(['message' => 'Метод не поддерживается'], 405);
+    jsonResponse(['message' => 'Method is not supported'], 405);
 }
 
 $user = requireAuth();
-
 if (($user['auth_source'] ?? '') !== 'org_admins' || ($user['role'] ?? '') !== 'superadmin') {
-    jsonResponse(['message' => 'Доступ только для superadmin надзорного органа'], 403);
+    jsonResponse(['message' => 'Only superadmin has access'], 403);
 }
 
 $data = getJsonInput();
@@ -23,7 +22,7 @@ $adminId = (int)($data['admin_id'] ?? 0);
 $comment = trim((string)($data['comment'] ?? ''));
 
 if ($adminId <= 0) {
-    jsonResponse(['message' => 'Некорректный ID администратора'], 422);
+    jsonResponse(['message' => 'Invalid admin id'], 422);
 }
 
 try {
@@ -31,10 +30,14 @@ try {
     $pdo->beginTransaction();
 
     $actorAdminId = (int)$user['id'];
-    $organizationId = (int)$user['organization_id'];
+
+    if ($adminId === $actorAdminId) {
+        $pdo->rollBack();
+        jsonResponse(['message' => 'You cannot deactivate yourself'], 409);
+    }
 
     $targetStmt = $pdo->prepare('
-        SELECT id, organization_id, role, is_active, login
+        SELECT id, role, is_active
         FROM org_admins
         WHERE id = :id
         FOR UPDATE
@@ -44,12 +47,12 @@ try {
 
     if (!$targetAdmin) {
         $pdo->rollBack();
-        jsonResponse(['message' => 'Администратор не найден'], 404);
+        jsonResponse(['message' => 'Admin not found'], 404);
     }
 
-    if ((int)$targetAdmin['organization_id'] !== $organizationId || (string)$targetAdmin['role'] !== 'admin') {
+    if (!in_array((string)$targetAdmin['role'], ['admin', 'superadmin'], true)) {
         $pdo->rollBack();
-        jsonResponse(['message' => 'Недостаточно прав для удаления администратора'], 403);
+        jsonResponse(['message' => 'Target role cannot be deactivated'], 403);
     }
 
     $appointedByActorStmt = $pdo->prepare('
@@ -68,19 +71,19 @@ try {
 
     if (!$appointedByActorStmt->fetchColumn()) {
         $pdo->rollBack();
-        jsonResponse(['message' => 'Можно удалять только администраторов, которых назначили вы'], 403);
+        jsonResponse(['message' => 'You can deactivate only admins appointed by you'], 403);
     }
 
     if (!(bool)$targetAdmin['is_active']) {
         $pdo->rollBack();
-        jsonResponse(['message' => 'Администратор уже деактивирован'], 409);
+        jsonResponse(['message' => 'Admin is already inactive'], 409);
     }
 
     $deactivateStmt = $pdo->prepare('
         UPDATE org_admins
         SET is_active = FALSE
         WHERE id = :id
-        RETURNING id, login, is_active, created_at, last_login_at
+        RETURNING id, login, role, organization_id, filial_id, is_active, created_at, last_login_at
     ');
     $deactivateStmt->execute(['id' => $adminId]);
     $updatedAdmin = $deactivateStmt->fetch();
@@ -108,7 +111,7 @@ try {
     $pdo->commit();
 
     jsonResponse([
-        'message' => 'Администратор удален',
+        'message' => 'Admin deactivated',
         'admin' => $updatedAdmin,
     ]);
 } catch (Throwable $e) {
@@ -117,7 +120,7 @@ try {
     }
 
     jsonResponse([
-        'message' => 'Ошибка сервера',
+        'message' => 'Server error',
         'error' => $e->getMessage(),
     ], 500);
 }

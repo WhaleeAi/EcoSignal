@@ -9,34 +9,37 @@ require_once __DIR__ . '/helpers.php';
 allowCors();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-    jsonResponse(['message' => 'Метод не поддерживается'], 405);
+    jsonResponse(['message' => 'Method is not supported'], 405);
 }
 
 $user = requireAuth();
-
 if (($user['auth_source'] ?? '') !== 'org_admins' || ($user['role'] ?? '') !== 'superadmin') {
-    jsonResponse(['message' => 'Доступ только для superadmin надзорного органа'], 403);
+    jsonResponse(['message' => 'Only superadmin has access'], 403);
 }
 
 try {
     $pdo = getPDO();
     $actorAdminId = (int)$user['id'];
-    $organizationId = (int)$user['organization_id'];
 
     $adminsStmt = $pdo->prepare('
         SELECT
             t.id,
             t.login,
+            t.role,
+            t.organization_id,
             t.filial_id,
             t.is_active,
             t.created_at,
             t.last_login_at,
+            o.name AS organization_name,
+            o.org_type AS organization_type,
             f.name AS filial_name,
             f.region AS filial_region,
             ap.appointed_at,
             la.action_type AS last_action,
             la.created_at AS last_action_at
         FROM org_admins t
+        INNER JOIN organizations o ON o.id = t.organization_id
         INNER JOIN (
             SELECT
                 target_admin_id,
@@ -55,15 +58,11 @@ try {
             LIMIT 1
         ) la ON TRUE
         LEFT JOIN filials f ON f.id = t.filial_id
-        WHERE t.organization_id = :organization_id
-          AND t.role = :role
         ORDER BY ap.appointed_at DESC, t.id DESC
     ');
     $adminsStmt->execute([
         'actor_admin_id' => $actorAdminId,
         'appointed_action' => 'appointed',
-        'organization_id' => $organizationId,
-        'role' => 'admin',
     ]);
     $admins = $adminsStmt->fetchAll();
 
@@ -75,17 +74,18 @@ try {
     }
 
     jsonResponse([
-        'message' => 'Список назначенных администраторов загружен',
+        'message' => 'Assigned admins loaded',
         'user' => $user,
         'stats' => [
             'appointed_total' => count($admins),
             'appointed_active' => $activeCount,
+            'appointed_inactive' => count($admins) - $activeCount,
         ],
         'admins' => $admins,
     ]);
 } catch (Throwable $e) {
     jsonResponse([
-        'message' => 'Ошибка сервера',
+        'message' => 'Server error',
         'error' => $e->getMessage(),
     ], 500);
 }

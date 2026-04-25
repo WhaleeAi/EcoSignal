@@ -46,11 +46,33 @@ try {
             u.email,
             u.score,
             c.name AS category_name,
-            s.name AS subcategory_name
+            s.name AS subcategory_name,
+            aa.organization_id AS assigned_organization_id,
+            aa.filial_id AS assigned_filial_id,
+            aa.responsible_org_admin_id,
+            aa.status AS assignment_status,
+            o.name AS assigned_organization_name,
+            f.name AS assigned_filial_name,
+            f.region AS assigned_filial_region,
+            oa.login AS responsible_org_admin_login
         FROM appeals a
         INNER JOIN users u ON u.id = a.user_id
         INNER JOIN categories c ON c.id = a.category_id
         LEFT JOIN subcategories s ON s.id = a.subcategory_id
+        LEFT JOIN LATERAL (
+            SELECT
+                organization_id,
+                filial_id,
+                responsible_org_admin_id,
+                status
+            FROM appeal_assignments
+            WHERE appeal_id = a.id
+            ORDER BY assigned_at DESC, id DESC
+            LIMIT 1
+        ) aa ON TRUE
+        LEFT JOIN organizations o ON o.id = aa.organization_id
+        LEFT JOIN filials f ON f.id = aa.filial_id
+        LEFT JOIN org_admins oa ON oa.id = aa.responsible_org_admin_id
         WHERE a.assigned_admin_id = :admin_id
           AND a.status <> 'pending'
         ORDER BY a.created_at DESC
@@ -135,6 +157,24 @@ try {
                 'email' => (string)$row['email'],
             ],
             'images' => $imagesByAppeal[$appealId] ?? [],
+            'assignment' => $row['assigned_organization_id'] !== null && $row['assigned_filial_id'] !== null
+                ? [
+                    'organization_id' => (int)$row['assigned_organization_id'],
+                    'organization_name' => (string)$row['assigned_organization_name'],
+                    'filial_id' => (int)$row['assigned_filial_id'],
+                    'filial_name' => (string)$row['assigned_filial_name'],
+                    'filial_region' => $row['assigned_filial_region'] !== null
+                        ? (string)$row['assigned_filial_region']
+                        : null,
+                    'responsible_org_admin_id' => $row['responsible_org_admin_id'] !== null
+                        ? (int)$row['responsible_org_admin_id']
+                        : null,
+                    'responsible_org_admin_login' => $row['responsible_org_admin_login'] !== null
+                        ? (string)$row['responsible_org_admin_login']
+                        : null,
+                    'status' => (string)($row['assignment_status'] ?? 'assigned'),
+                ]
+                : null,
         ];
     }
 

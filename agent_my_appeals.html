@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EcoSignal | Мои обращения</title>
+    <title>EcoSignal | Заявки агента</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -11,6 +11,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="admin.css" />
+    <link rel="stylesheet" href="agent.css" />
   </head>
   <body>
     <div class="admin-page">
@@ -33,31 +34,20 @@
           </div>
 
           <nav class="sidebar-nav" aria-label="Навигация">
-            <button
-              class="sidebar-nav-item"
-              type="button"
-              data-href="admin.html"
-              aria-label="Главная"
-            >
+            <button class="sidebar-nav-item" type="button" data-href="agent.html">
               <img src="./icons/Home.svg" alt="" />
               <span class="sidebar-nav-label">Главная</span>
             </button>
             <button
               class="sidebar-nav-item sidebar-nav-item--active"
               type="button"
-              data-href="admin_my_appeals.html"
-              aria-label="Мои обращения"
+              data-href="agent_my_appeals.html"
               aria-current="page"
             >
               <img src="./icons/my_appeals.svg" alt="" />
-              <span class="sidebar-nav-label">Мои обращения</span>
+              <span class="sidebar-nav-label">Заявки</span>
             </button>
-            <button
-              class="sidebar-nav-item"
-              type="button"
-              data-action="logout"
-              aria-label="Выход"
-            >
+            <button class="sidebar-nav-item" type="button" data-action="logout">
               <img src="./icons/logout.svg" alt="" />
               <span class="sidebar-nav-label">Выход</span>
             </button>
@@ -67,24 +57,27 @@
         <button class="sidebar-profile" type="button" aria-label="Профиль">
           <span class="sidebar-avatar" id="sidebarAvatar">А</span>
           <span class="sidebar-profile-meta">
-            <span class="sidebar-profile-name">Профиль</span>
-            <span class="sidebar-profile-level">Администратор</span>
+            <span class="sidebar-profile-name" id="sidebarProfileName">Профиль</span>
+            <span class="sidebar-profile-level" id="sidebarProfileLevel">Агент</span>
           </span>
           <img class="sidebar-profile-arrow" aria-hidden="true" src="./icons/arrow_down.svg" />
         </button>
       </aside>
 
       <div class="admin-workspace">
-        <main class="admin-content">
-          <header class="admin-header">
-            <h1 class="admin-title">Мои обращения</h1>
+        <main class="admin-content agent-content">
+          <header class="agent-header">
+            <div class="agent-header__copy">
+              <h1 class="admin-title">Заявки агента</h1>
+              <p class="agent-subtitle" id="organizationMeta">Организация: —</p>
+            </div>
           </header>
 
-          <section class="appeals-section" id="appealsSection" aria-label="Обращения не в статусе ожидания">
+          <section class="appeals-section" id="appealsSection" aria-label="Заявки агента">
             <h2 class="appeals-title">В работе и завершённые</h2>
             <p class="appeals-intro">
-              Заявки, назначенные вам, со статусом подтверждено, в работе, решено или отклонено
-              (не «ожидание»).
+              Все заявки, назначенные текущему агенту, со статусами кроме pending. Карточки и сетка совпадают с
+              admin_my_appeals.
             </p>
             <div class="appeals-grid" id="appealsGrid"></div>
           </section>
@@ -94,16 +87,16 @@
 
     <div class="photo-lightbox" id="photoLightbox" hidden>
       <div class="photo-lightbox__backdrop" id="photoLightboxBackdrop"></div>
-      <button class="photo-lightbox__close" id="photoLightboxClose" type="button" aria-label="Закрыть">&times;</button>
-      <button class="photo-lightbox__nav photo-lightbox__nav--prev" id="photoLightboxPrev" type="button" aria-label="Предыдущее">&lsaquo;</button>
+      <button class="photo-lightbox__close" id="photoLightboxClose" type="button" aria-label="Закрыть">×</button>
+      <button class="photo-lightbox__nav photo-lightbox__nav--prev" id="photoLightboxPrev" type="button" aria-label="Предыдущее">‹</button>
       <div class="photo-lightbox__stage">
         <img class="photo-lightbox__img" id="photoLightboxImg" alt="" />
       </div>
-      <button class="photo-lightbox__nav photo-lightbox__nav--next" id="photoLightboxNext" type="button" aria-label="Следующее">&rsaquo;</button>
+      <button class="photo-lightbox__nav photo-lightbox__nav--next" id="photoLightboxNext" type="button" aria-label="Следующее">›</button>
       <p class="photo-lightbox__counter" id="photoLightboxCounter" aria-live="polite"></p>
     </div>
 
-    <script src="appeal_drawer.js"></script>
-    <script src="admin_my_appeals.js"></script>
+    <script src="agent_appeal_drawers.js"></script>
+    <script src="agent_my_appeals.js"></script>
   </body>
 </html>

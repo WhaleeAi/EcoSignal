@@ -11,8 +11,9 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="admin.css" />
+    <link rel="stylesheet" href="agent.css" />
   </head>
-  <body>
+  <body class="my-appeals-page">
     <div class="admin-page">
       <aside class="sidebar" id="sidebar" aria-label="Боковое меню">
         <div class="sidebar-top">
@@ -33,12 +34,7 @@
           </div>
 
           <nav class="sidebar-nav" aria-label="Навигация">
-            <button
-              class="sidebar-nav-item"
-              type="button"
-              data-href="map.html"
-              aria-label="Главная"
-            >
+            <button class="sidebar-nav-item" type="button" data-href="map.html" aria-label="Главная">
               <img src="./icons/Home.svg" alt="" />
               <span class="sidebar-nav-label">Главная</span>
             </button>
@@ -52,12 +48,7 @@
               <img src="./icons/my_appeals.svg" alt="" />
               <span class="sidebar-nav-label">Мои обращения</span>
             </button>
-            <button
-              class="sidebar-nav-item"
-              type="button"
-              data-action="logout"
-              aria-label="Выход"
-            >
+            <button class="sidebar-nav-item" type="button" data-action="logout" aria-label="Выход">
               <img src="./icons/logout.svg" alt="" />
               <span class="sidebar-nav-label">Выход</span>
             </button>
@@ -82,12 +73,44 @@
 
           <section class="appeals-section" id="appealsSection" aria-label="Все обращения пользователя">
             <h2 class="appeals-title">Все мои обращения</h2>
-            <p class="appeals-intro">Список заявок, которые вы отправили через карту EcoSignal. Нажмите на карточку, чтобы открыть детали и фотографии.</p>
+            <p class="appeals-intro">
+              Список заявок, которые вы отправили через карту EcoSignal. Нажмите на карточку, чтобы открыть детали,
+              назначение и чат.
+            </p>
             <div class="appeals-grid" id="appealsGrid"></div>
           </section>
         </main>
 
-        <aside class="appeal-drawer" id="appealModal" aria-hidden="true">
+        <aside class="agent-chat-drawer" id="appealChat" aria-hidden="true">
+          <div class="agent-chat-drawer__surface">
+            <header class="agent-chat__header">
+              <div class="agent-chat__header-copy">
+                <h3 class="agent-chat__title" id="appealChatTitle">Чат по заявке</h3>
+                <p class="agent-chat__subtitle">Переписка с ответственным орг-админом.</p>
+              </div>
+            </header>
+
+            <div class="agent-chat__body" id="appealChatBody">
+              <p class="agent-chat__empty" id="appealChatEmpty">Сообщений по этой заявке пока нет.</p>
+              <div class="agent-chat__messages" id="appealChatList"></div>
+            </div>
+
+            <form class="agent-chat__composer" id="appealChatComposer">
+              <textarea
+                class="agent-chat__input"
+                id="appealChatInput"
+                rows="1"
+                placeholder="Введите сообщение"
+                aria-label="Введите сообщение"
+              ></textarea>
+              <button class="agent-chat__send" id="appealChatSend" type="submit" aria-label="Отправить">
+                <span aria-hidden="true">➤</span>
+              </button>
+            </form>
+          </div>
+        </aside>
+
+        <aside class="appeal-drawer appeal-drawer--agent" id="appealModal" aria-hidden="true">
           <div class="appeal-drawer__surface">
             <section class="appeal-modal__dialog" role="region" aria-labelledby="appealModalTitle">
               <header class="appeal-modal__header">
@@ -135,40 +158,33 @@
                     </div>
                   </fieldset>
 
-                  <label class="appeal-modal__field appeal-modal__field--agency">
-                    <span>Надзорный орган (заглушка)</span>
-                    <div class="appeal-modal__select-wrap" id="appealModalAgencyWrap">
-                      <button
-                        type="button"
-                        class="appeal-modal__select-trigger"
-                        id="appealModalAgencyTrigger"
-                        aria-haspopup="listbox"
-                        aria-expanded="false"
-                        aria-controls="appealModalAgencyList"
-                      >
-                        <span class="appeal-modal__select-value" id="appealModalAgencyDisplay">Выберите орган</span>
-                        <span class="appeal-modal__select-chevron" aria-hidden="true"></span>
-                      </button>
-                      <ul class="appeal-modal__select-dropdown" id="appealModalAgencyList" role="listbox" hidden></ul>
-                      <select class="appeal-modal__select-native" id="appealModalAgency" tabindex="-1" aria-hidden="true">
-                        <option value="">Выберите орган</option>
-                        <option value="Росприроднадзор">Росприроднадзор</option>
-                        <option value="Муниципальный контроль">Муниципальный контроль</option>
-                        <option value="Россельхознадзор">Россельхознадзор</option>
-                      </select>
-                    </div>
-                  </label>
+                  <div class="appeal-modal__field">
+                    <span>Статус обращения</span>
+                    <p class="appeal-modal__note" id="appealModalStatus">—</p>
+                  </div>
 
-                  <p class="appeal-modal__note">
-                    Назначение в надзорный орган пока работает как UI-заглушка.
-                  </p>
+                  <div class="appeal-modal__field">
+                    <span>Назначенный орган</span>
+                    <p class="appeal-modal__note" id="appealModalOrganization">Орган не назначен</p>
+                  </div>
+
+                  <div class="appeal-modal__field">
+                    <span>Филиал</span>
+                    <p class="appeal-modal__note" id="appealModalFilial">Филиал не назначен</p>
+                  </div>
+
+                  <div class="appeal-modal__field">
+                    <span>Ответственный</span>
+                    <p class="appeal-modal__note" id="appealModalResponsible">Ответственный не назначен</p>
+                  </div>
+
+                  <p class="appeal-modal__note" id="appealModalAssignmentNote"></p>
                   <p class="appeal-modal__message" id="appealModalMessage"></p>
                 </div>
               </div>
 
               <footer class="appeal-modal__footer">
-                <button class="appeal-modal__btn appeal-modal__btn--ghost" id="appealModalCancel" type="button">Отмена</button>
-                <button class="appeal-modal__btn appeal-modal__btn--primary" id="appealModalSave" type="button">Сохранить</button>
+                <button class="appeal-modal__btn appeal-modal__btn--ghost" id="appealModalCancel" type="button">Закрыть</button>
               </footer>
             </section>
           </div>

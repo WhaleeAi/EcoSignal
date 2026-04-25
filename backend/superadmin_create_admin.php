@@ -13,7 +13,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $user = requireAuth();
-
 if (($user['auth_source'] ?? '') !== 'org_admins' || ($user['role'] ?? '') !== 'superadmin') {
     jsonResponse(['message' => 'Доступ только для superadmin надзорного органа'], 403);
 }
@@ -22,6 +21,8 @@ $data = getJsonInput();
 
 $login = trim((string)($data['login'] ?? ''));
 $password = trim((string)($data['password'] ?? ''));
+$role = trim((string)($data['role'] ?? 'admin'));
+$organizationId = (int)($data['organization_id'] ?? 0);
 $filialIdRaw = $data['filial_id'] ?? null;
 $comment = trim((string)($data['comment'] ?? ''));
 
@@ -30,8 +31,12 @@ if ($filialIdRaw !== null && $filialIdRaw !== '') {
     $filialId = (int)$filialIdRaw;
 }
 
-if ($login === '' || $password === '') {
-    jsonResponse(['message' => 'Заполните логин и пароль'], 422);
+if ($login === '' || $password === '' || $organizationId <= 0) {
+    jsonResponse(['message' => 'Заполните логин, пароль и организацию'], 422);
+}
+
+if (!in_array($role, ['admin', 'superadmin'], true)) {
+    jsonResponse(['message' => 'Некорректная роль'], 422);
 }
 
 if (mb_strlen($password) < 6) {
@@ -47,7 +52,38 @@ try {
     $pdo->beginTransaction();
 
     $actorAdminId = (int)$user['id'];
-    $organizationId = (int)$user['organization_id'];
+
+    $organizationStmt = $pdo->prepare('
+        SELECT id, name, org_type
+        FROM organizations
+        WHERE id = :id
+        LIMIT 1
+    ');
+    $organizationStmt->execute(['id' => $organizationId]);
+    $organization = $organizationStmt->fetch();
+    if (!$organization) {
+        $pdo->rollBack();
+        jsonResponse(['message' => 'Организация не найдена'], 404);
+    }
+
+    if ($filialId !== null) {
+        $filialStmt = $pdo->prepare('
+            SELECT id, name
+            FROM filials
+            WHERE id = :id
+              AND organization_id = :organization_id
+            LIMIT 1
+        ');
+        $filialStmt->execute([
+            'id' => $filialId,
+            'organization_id' => $organizationId,
+        ]);
+
+        if (!$filialStmt->fetch()) {
+            $pdo->rollBack();
+            jsonResponse(['message' => 'Филиал не найден или не относится к выбранной организации'], 404);
+        }
+    }
 
     $existingAdminStmt = $pdo->prepare('
         SELECT id
@@ -59,26 +95,6 @@ try {
     if ($existingAdminStmt->fetch()) {
         $pdo->rollBack();
         jsonResponse(['message' => 'Администратор с таким логином уже существует'], 409);
-    }
-
-    if ($filialId !== null) {
-        $filialStmt = $pdo->prepare('
-            SELECT id
-            FROM filials
-            WHERE id = :id
-              AND organization_id = :organization_id
-              AND is_active = TRUE
-            LIMIT 1
-        ');
-        $filialStmt->execute([
-            'id' => $filialId,
-            'organization_id' => $organizationId,
-        ]);
-
-        if (!$filialStmt->fetch()) {
-            $pdo->rollBack();
-            jsonResponse(['message' => 'Филиал не найден или недоступен'], 404);
-        }
     }
 
     $createAdminStmt = $pdo->prepare('
@@ -105,7 +121,7 @@ try {
         'filial_id' => $filialId,
         'login' => $login,
         'password_hash' => password_hash($password, PASSWORD_DEFAULT),
-        'role' => 'admin',
+        'role' => $role,
     ]);
     $admin = $createAdminStmt->fetch();
 
@@ -133,7 +149,7 @@ try {
     $pdo->commit();
 
     jsonResponse([
-        'message' => 'Администратор добавлен',
+        'message' => 'Администратор создан',
         'admin' => $admin,
     ], 201);
 } catch (Throwable $e) {

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EcoSignal | Админ-панель</title>
+    <title>EcoSignal | Агент</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -11,6 +11,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="admin.css" />
+    <link rel="stylesheet" href="agent.css" />
   </head>
   <body>
     <div class="admin-page">
@@ -36,28 +37,17 @@
             <button
               class="sidebar-nav-item sidebar-nav-item--active"
               type="button"
-              data-href="admin.html"
-              aria-label="Главная"
+              data-href="agent.html"
               aria-current="page"
             >
               <img src="./icons/Home.svg" alt="" />
               <span class="sidebar-nav-label">Главная</span>
             </button>
-            <button
-              class="sidebar-nav-item"
-              type="button"
-              data-href="admin_my_appeals.html"
-              aria-label="Мои обращения"
-            >
+            <button class="sidebar-nav-item" type="button" data-href="agent_my_appeals.html">
               <img src="./icons/my_appeals.svg" alt="" />
-              <span class="sidebar-nav-label">Мои обращения</span>
+              <span class="sidebar-nav-label">Заявки</span>
             </button>
-            <button
-              class="sidebar-nav-item"
-              type="button"
-              data-action="logout"
-              aria-label="Выход"
-            >
+            <button class="sidebar-nav-item" type="button" data-action="logout">
               <img src="./icons/logout.svg" alt="" />
               <span class="sidebar-nav-label">Выход</span>
             </button>
@@ -67,23 +57,49 @@
         <button class="sidebar-profile" type="button" aria-label="Профиль">
           <span class="sidebar-avatar" id="sidebarAvatar">А</span>
           <span class="sidebar-profile-meta">
-            <span class="sidebar-profile-name">Профиль</span>
-            <span class="sidebar-profile-level">Администратор</span>
+            <span class="sidebar-profile-name" id="sidebarProfileName">Профиль</span>
+            <span class="sidebar-profile-level" id="sidebarProfileLevel">Агент</span>
           </span>
           <img class="sidebar-profile-arrow" aria-hidden="true" src="./icons/arrow_down.svg" />
         </button>
       </aside>
 
       <div class="admin-workspace">
-        <main class="admin-content">
-          <header class="admin-header">
-            <h1 class="admin-title">Панель администратора</h1>
+        <main class="admin-content agent-content">
+          <header class="agent-header">
+            <div class="agent-header__copy">
+              <h1 class="admin-title">Панель агента</h1>
+              <p class="agent-subtitle" id="organizationMeta">Организация: —</p>
+            </div>
           </header>
 
-          <section class="stats-grid" id="statsGrid" aria-label="Сводная статистика"></section>
+          <section class="agent-overview" aria-label="Аналитика за последние 7 дней">
+            <article class="agent-card">
+              <div class="agent-card__head">
+                <h2 class="agent-card__title">Заявки за 7 дней</h2>
+                <p class="agent-card__note" id="chartSummary">0 заявок</p>
+              </div>
+              <div class="agent-chart" id="agentChart"></div>
+            </article>
 
-          <section class="appeals-section" id="appealsSection" aria-label="Карточки заявок">
-            <h2 class="appeals-title">Последние обращения</h2>
+            <article class="agent-card">
+              <div class="agent-card__head">
+                <h2 class="agent-card__title">Карта заявок</h2>
+                <p class="agent-card__note" id="mapSummary">Нет точек</p>
+              </div>
+              <div class="agent-map-wrap">
+                <div class="agent-map" id="agentMap"></div>
+                <p class="agent-map__empty" id="agentMapEmpty" hidden>У заявок за 7 дней нет координат.</p>
+              </div>
+            </article>
+          </section>
+
+          <section class="appeals-section" id="appealsSection" aria-label="Заявки за последние 7 дней">
+            <h2 class="appeals-title">Заявки за последние 7 дней</h2>
+            <p class="appeals-intro">
+              Здесь отображаются все заявки, назначенные вам за последние семь дней. Карточки используют тот же
+              визуальный паттерн, что и на странице admin_my_appeals.
+            </p>
             <div class="appeals-grid" id="appealsGrid"></div>
           </section>
         </main>
@@ -92,17 +108,16 @@
 
     <div class="photo-lightbox" id="photoLightbox" hidden>
       <div class="photo-lightbox__backdrop" id="photoLightboxBackdrop"></div>
-      <button class="photo-lightbox__close" id="photoLightboxClose" type="button" aria-label="Закрыть">&times;</button>
-      <button class="photo-lightbox__nav photo-lightbox__nav--prev" id="photoLightboxPrev" type="button" aria-label="Предыдущее">&lsaquo;</button>
+      <button class="photo-lightbox__close" id="photoLightboxClose" type="button" aria-label="Закрыть">×</button>
+      <button class="photo-lightbox__nav photo-lightbox__nav--prev" id="photoLightboxPrev" type="button" aria-label="Предыдущее">‹</button>
       <div class="photo-lightbox__stage">
         <img class="photo-lightbox__img" id="photoLightboxImg" alt="" />
       </div>
-      <button class="photo-lightbox__nav photo-lightbox__nav--next" id="photoLightboxNext" type="button" aria-label="Следующее">&rsaquo;</button>
+      <button class="photo-lightbox__nav photo-lightbox__nav--next" id="photoLightboxNext" type="button" aria-label="Следующее">›</button>
       <p class="photo-lightbox__counter" id="photoLightboxCounter" aria-live="polite"></p>
     </div>
 
-    <script src="appeal_drawer.js"></script>
     <script src="https://api-maps.yandex.ru/2.1/?apikey=c4b88e0d-3370-4eee-b2cd-7bb4ad66c4af&lang=ru_RU"></script>
-    <script src="admin.js"></script>
+    <script src="agent.js"></script>
   </body>
 </html>

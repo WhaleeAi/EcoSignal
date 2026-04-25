@@ -13,19 +13,25 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 }
 
 $user = requireAuth();
-
 if (($user['auth_source'] ?? '') !== 'org_admins' || ($user['role'] ?? '') !== 'superadmin') {
     jsonResponse(['message' => 'Доступ только для superadmin надзорного органа'], 403);
 }
 
 try {
     $pdo = getPDO();
-    $organizationId = (int)$user['organization_id'];
     $actorAdminId = (int)$user['id'];
 
-    $filialsStmt = $pdo->prepare('
+    $organizationsStmt = $pdo->query('
+        SELECT id, name, org_type, created_at
+        FROM organizations
+        ORDER BY name ASC
+    ');
+    $organizations = $organizationsStmt->fetchAll();
+
+    $filialsStmt = $pdo->query('
         SELECT
             id,
+            organization_id,
             name,
             address,
             hotline_phone,
@@ -34,36 +40,32 @@ try {
             is_active,
             created_at
         FROM filials
-        WHERE organization_id = :organization_id
-        ORDER BY is_active DESC, name ASC
+        ORDER BY organization_id ASC, name ASC
     ');
-    $filialsStmt->execute(['organization_id' => $organizationId]);
     $filials = $filialsStmt->fetchAll();
 
-    $adminsStmt = $pdo->prepare('
+    $adminsStmt = $pdo->query('
         SELECT
             oa.id,
             oa.login,
             oa.role,
+            oa.organization_id,
             oa.filial_id,
             oa.is_active,
             oa.created_at,
             oa.last_login_at,
+            o.name AS organization_name,
+            o.org_type AS organization_type,
             f.name AS filial_name,
             f.region AS filial_region
         FROM org_admins oa
+        INNER JOIN organizations o ON o.id = oa.organization_id
         LEFT JOIN filials f ON f.id = oa.filial_id
-        WHERE oa.organization_id = :organization_id
-          AND oa.role = :role
-        ORDER BY oa.is_active DESC, oa.created_at DESC
+        ORDER BY oa.created_at DESC
     ');
-    $adminsStmt->execute([
-        'organization_id' => $organizationId,
-        'role' => 'admin',
-    ]);
     $admins = $adminsStmt->fetchAll();
 
-    $refsStmt = $pdo->prepare('
+    $recentRefsStmt = $pdo->prepare('
         SELECT
             r.id,
             r.action_type,
@@ -71,41 +73,41 @@ try {
             r.comment,
             t.id AS target_admin_id,
             t.login AS target_login,
+            t.role AS target_role,
             t.is_active AS target_is_active,
-            t.created_at AS target_created_at,
+            o.name AS target_organization_name,
             f.name AS filial_name,
             f.region AS filial_region
         FROM org_adm_refs r
         INNER JOIN org_admins t ON t.id = r.target_admin_id
+        INNER JOIN organizations o ON o.id = t.organization_id
         LEFT JOIN filials f ON f.id = t.filial_id
         WHERE r.actor_admin_id = :actor_admin_id
         ORDER BY r.created_at DESC
         LIMIT 20
     ');
-    $refsStmt->execute(['actor_admin_id' => $actorAdminId]);
-    $recentRefs = $refsStmt->fetchAll();
+    $recentRefsStmt->execute(['actor_admin_id' => $actorAdminId]);
+    $recentRefs = $recentRefsStmt->fetchAll();
 
-    $activeAdminsCount = 0;
-    foreach ($admins as $adminRow) {
-        if ((bool)$adminRow['is_active']) {
-            $activeAdminsCount++;
-        }
-    }
+    $statsStmt = $pdo->query("
+        SELECT
+            (SELECT COUNT(*) FROM organizations) AS organizations_total,
+            (SELECT COUNT(*) FROM filials) AS filials_total,
+            (SELECT COUNT(*) FROM org_admins WHERE role = 'admin') AS admins_total,
+            (SELECT COUNT(*) FROM org_admins WHERE role = 'superadmin') AS superadmins_total
+    ");
+    $stats = $statsStmt->fetch() ?: [];
 
     jsonResponse([
         'message' => 'Данные панели superadmin загружены',
         'user' => $user,
-        'organization' => [
-            'id' => $organizationId,
-            'name' => (string)$user['organization_name'],
-            'type' => (string)$user['organization_type'],
-        ],
         'stats' => [
-            'filials_total' => count($filials),
-            'admins_total' => count($admins),
-            'admins_active' => $activeAdminsCount,
-            'my_actions_total' => count($recentRefs),
+            'organizations_total' => (int)($stats['organizations_total'] ?? 0),
+            'filials_total' => (int)($stats['filials_total'] ?? 0),
+            'admins_total' => (int)($stats['admins_total'] ?? 0),
+            'superadmins_total' => (int)($stats['superadmins_total'] ?? 0),
         ],
+        'organizations' => $organizations,
         'filials' => $filials,
         'admins' => $admins,
         'recent_refs' => $recentRefs,

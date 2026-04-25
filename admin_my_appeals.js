@@ -29,7 +29,15 @@
   const modalCarouselPrev = document.getElementById('appealModalCarouselPrev')
   const modalCarouselNext = document.getElementById('appealModalCarouselNext')
   const modalDescription = document.getElementById('appealModalDescription')
+  const modalMapBlock = document.getElementById('appealModalMapBlock')
+  const modalNote = document.getElementById('appealModalNote')
   const modalPriorityRadios = document.querySelectorAll('input[name="appealModalPriority"]')
+  const modalOrganization = document.getElementById('appealModalOrganization')
+  const modalOrganizationTrigger = document.getElementById('appealModalOrganizationTrigger')
+  const modalOrganizationDisplay = document.getElementById('appealModalOrganizationDisplay')
+  const modalFilial = document.getElementById('appealModalFilial')
+  const modalFilialTrigger = document.getElementById('appealModalFilialTrigger')
+  const modalFilialDisplay = document.getElementById('appealModalFilialDisplay')
   const modalAgency = document.getElementById('appealModalAgency')
   const modalAgencyTrigger = document.getElementById('appealModalAgencyTrigger')
   const modalAgencyList = document.getElementById('appealModalAgencyList')
@@ -148,6 +156,88 @@
     if (!wasSet && modalPriorityRadios[0]) {
       modalPriorityRadios[0].checked = true
     }
+  }
+
+  function formatAssignmentText(appeal) {
+    const assignment = appeal?.assignment || null
+    const statusLabel = {
+      confirmed: 'Подтверждена',
+      in_progress: 'В работе',
+      resolved: 'Решена',
+      rejected: 'Отклонена',
+    }[String(appeal?.status || '')]
+
+    if (!assignment) {
+      return statusLabel
+        ? `Статус: ${statusLabel}. Назначение для этой заявки не зафиксировано.`
+        : 'Назначение для этой заявки не зафиксировано.'
+    }
+
+    const filialLabel = assignment.filial_region
+      ? `${assignment.filial_name} (${assignment.filial_region})`
+      : String(assignment.filial_name || '—')
+    const responsibleLabel = assignment.responsible_org_admin_login
+      ? ` Ответственный агент: ${assignment.responsible_org_admin_login}.`
+      : ''
+
+    return `${statusLabel ? `Статус: ${statusLabel}. ` : ''}Орган: ${assignment.organization_name}. Филиал: ${filialLabel}.${responsibleLabel} Редактирование на этой странице недоступно.`
+  }
+
+  function setReadOnlySelect(select, trigger, display, value, label, placeholder) {
+    if (select) {
+      select.innerHTML = ''
+      const option = document.createElement('option')
+      option.value = value ? String(value) : ''
+      option.textContent = label || placeholder
+      option.selected = true
+      select.append(option)
+      select.disabled = true
+    }
+
+    if (display) {
+      display.textContent = label || placeholder
+    }
+
+    if (trigger) {
+      trigger.disabled = true
+      trigger.setAttribute('aria-expanded', 'false')
+    }
+  }
+
+  function setupReadOnlyModal() {
+    if (modalSave) {
+      modalSave.hidden = true
+      modalSave.disabled = true
+    }
+
+    if (modalCancel) {
+      modalCancel.textContent = 'Закрыть'
+    }
+
+    if (modalMapBlock) {
+      modalMapBlock.hidden = true
+    }
+
+    modalPriorityRadios.forEach(input => {
+      input.disabled = true
+    })
+
+    setReadOnlySelect(
+      modalOrganization,
+      modalOrganizationTrigger,
+      modalOrganizationDisplay,
+      '',
+      '',
+      'Орган не назначен'
+    )
+    setReadOnlySelect(
+      modalFilial,
+      modalFilialTrigger,
+      modalFilialDisplay,
+      '',
+      '',
+      'Филиал не назначен'
+    )
   }
 
   function setAgencyDropdownOpen(open) {
@@ -644,11 +734,31 @@
 
     setSelectedPriorityValue(Number(appeal.priority || 0))
 
-    if (modalAgency) {
-      modalAgency.value = ''
+    const assignment = appeal.assignment || null
+    setReadOnlySelect(
+      modalOrganization,
+      modalOrganizationTrigger,
+      modalOrganizationDisplay,
+      assignment?.organization_id || '',
+      assignment?.organization_name || '',
+      'Орган не назначен'
+    )
+    setReadOnlySelect(
+      modalFilial,
+      modalFilialTrigger,
+      modalFilialDisplay,
+      assignment?.filial_id || '',
+      assignment
+        ? assignment.filial_region
+          ? `${assignment.filial_name} (${assignment.filial_region})`
+          : String(assignment.filial_name || '')
+        : '',
+      'Филиал не назначен'
+    )
+
+    if (modalNote) {
+      modalNote.textContent = formatAssignmentText(appeal)
     }
-    syncAgencyDisplayFromSelect()
-    closeAgencyDropdown()
 
     setModalMessage('')
     modal.classList.add('appeal-drawer--open')
@@ -657,7 +767,6 @@
 
   function closeAppealModal() {
     if (!modal) return
-    closeAgencyDropdown()
     modal.classList.remove('appeal-drawer--open')
     modal.setAttribute('aria-hidden', 'true')
     state.currentAppealId = null
@@ -704,14 +813,11 @@
   function setupModalHandlers() {
     modalClose?.addEventListener('click', closeAppealModal)
     modalCancel?.addEventListener('click', closeAppealModal)
-    modalSave?.addEventListener('click', saveAppealModal)
 
     document.addEventListener('keydown', event => {
       if (event.key !== 'Escape') return
       if (photoLightbox && !photoLightbox.hidden) return
-      if (agencyDropdownOpen) {
-        closeAgencyDropdown()
-      }
+      closeAppealModal()
     })
   }
 
@@ -751,6 +857,11 @@
       throw new Error('__redirect_superadmin__')
     }
 
+    if (data.user.role === 'admin' && data.user.auth_source === 'org_admins') {
+      window.location.replace('agent.html')
+      throw new Error('__redirect_agent__')
+    }
+
     if (data.user.role !== 'admin') {
       window.location.replace('map.html')
       throw new Error('__redirect_non_admin__')
@@ -774,7 +885,7 @@
         throw new Error('__redirect_login__')
       }
       if (response.status === 403) {
-        window.location.replace('map.html')
+        window.location.replace('agent.html')
         throw new Error('__redirect_non_admin__')
       }
       throw new Error(data.message || 'Не удалось загрузить обращения')
@@ -869,7 +980,7 @@
     setupSidebarActions()
     setupSidebarToggle()
     setupAppealsGridLayout()
-    setupAgencyCustomSelect()
+    setupReadOnlyModal()
     setupAppealCarousel()
     setupPhotoLightbox()
     setupModalHandlers()
@@ -886,7 +997,8 @@
       if (
         error?.message === '__redirect_login__' ||
         error?.message === '__redirect_non_admin__' ||
-        error?.message === '__redirect_superadmin__'
+        error?.message === '__redirect_superadmin__' ||
+        error?.message === '__redirect_agent__'
       ) {
         return
       }

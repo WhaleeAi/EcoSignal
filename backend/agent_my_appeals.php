@@ -24,22 +24,13 @@ function buildFullName(?string $firstName, ?string $lastName, ?string $email): s
 
 $admin = requireAuth();
 
-if (($admin['role'] ?? '') !== 'admin') {
-    jsonResponse(['message' => 'Доступ только для администраторов'], 403);
+if (($admin['role'] ?? '') !== 'admin' || ($admin['auth_source'] ?? '') !== 'org_admins') {
+    jsonResponse(['message' => 'Доступ только для агента'], 403);
 }
 
 try {
     $pdo = getPDO();
     $adminId = (int)$admin['id'];
-
-    $statsStmt = $pdo->prepare("
-        SELECT COUNT(*) AS pending_count
-        FROM appeals
-        WHERE assigned_admin_id = :admin_id
-          AND status = 'pending'
-    ");
-    $statsStmt->execute(['admin_id' => $adminId]);
-    $statsRow = $statsStmt->fetch() ?: [];
 
     $appealsStmt = $pdo->prepare("
         SELECT
@@ -49,66 +40,32 @@ try {
             a.created_at,
             a.priority,
             a.assigned_admin_id,
-            a.latitude,
-            a.longitude,
+            aa.assigned_at AS assignment_assigned_at,
             u.id AS user_id,
             u.first_name,
             u.last_name,
             u.email,
             u.score,
             c.name AS category_name,
-            s.name AS subcategory_name,
-            aa.organization_id AS assigned_organization_id,
-            aa.filial_id AS assigned_filial_id,
-            aa.status AS assignment_status,
-            o.name AS assigned_organization_name,
-            f.name AS assigned_filial_name,
-            f.region AS assigned_filial_region
+            s.name AS subcategory_name
         FROM appeals a
         INNER JOIN users u ON u.id = a.user_id
         INNER JOIN categories c ON c.id = a.category_id
         LEFT JOIN subcategories s ON s.id = a.subcategory_id
-        LEFT JOIN LATERAL (
+        INNER JOIN LATERAL (
             SELECT
-                organization_id,
-                filial_id,
-                status
+                responsible_org_admin_id,
+                assigned_at
             FROM appeal_assignments
             WHERE appeal_id = a.id
             ORDER BY assigned_at DESC, id DESC
             LIMIT 1
-        ) aa ON TRUE
-        LEFT JOIN organizations o ON o.id = aa.organization_id
-        LEFT JOIN filials f ON f.id = aa.filial_id
-        WHERE a.assigned_admin_id = :admin_id
-          AND a.status = 'pending'
-        ORDER BY a.created_at DESC
+        ) aa ON aa.responsible_org_admin_id = :admin_id
+        WHERE a.status <> 'pending'
+        ORDER BY aa.assigned_at DESC, a.created_at DESC
     ");
     $appealsStmt->execute(['admin_id' => $adminId]);
     $appealRows = $appealsStmt->fetchAll();
-
-    $organizationsStmt = $pdo->query('
-        SELECT id, name, org_type, created_at
-        FROM organizations
-        ORDER BY name ASC
-    ');
-    $organizations = $organizationsStmt->fetchAll();
-
-    $filialsStmt = $pdo->query('
-        SELECT
-            id,
-            organization_id,
-            name,
-            address,
-            hotline_phone,
-            email,
-            region,
-            is_active,
-            created_at
-        FROM filials
-        ORDER BY organization_id ASC, name ASC
-    ');
-    $filials = $filialsStmt->fetchAll();
 
     $appealIds = array_map(
         static fn(array $row): int => (int)$row['appeal_id'],
@@ -174,9 +131,8 @@ try {
             'status' => (string)$row['status'],
             'description' => (string)$row['description'],
             'created_at' => (string)$row['created_at'],
+            'assigned_at' => (string)$row['assignment_assigned_at'],
             'priority' => (int)$row['priority'],
-            'latitude' => $row['latitude'] !== null ? (float)$row['latitude'] : null,
-            'longitude' => $row['longitude'] !== null ? (float)$row['longitude'] : null,
             'assigned_admin_id' => $row['assigned_admin_id'] !== null
                 ? (int)$row['assigned_admin_id']
                 : null,
@@ -189,41 +145,21 @@ try {
                 'email' => (string)$row['email'],
             ],
             'images' => $imagesByAppeal[$appealId] ?? [],
-            'assignment' => $row['assigned_organization_id'] !== null && $row['assigned_filial_id'] !== null
-                ? [
-                    'organization_id' => (int)$row['assigned_organization_id'],
-                    'organization_name' => (string)$row['assigned_organization_name'],
-                    'filial_id' => (int)$row['assigned_filial_id'],
-                    'filial_name' => (string)$row['assigned_filial_name'],
-                    'filial_region' => $row['assigned_filial_region'] !== null
-                        ? (string)$row['assigned_filial_region']
-                        : null,
-                    'status' => (string)($row['assignment_status'] ?? 'assigned'),
-                ]
-                : null,
         ];
     }
-
-    $adminName = buildFullName(
-        $admin['first_name'] ?? null,
-        $admin['last_name'] ?? null,
-        $admin['email'] ?? null
-    );
 
     jsonResponse([
         'user' => [
             'id' => $adminId,
-            'name' => $adminName,
+            'login' => (string)$admin['login'],
+            'name' => (string)$admin['login'],
             'role' => (string)$admin['role'],
+            'organization_name' => (string)$admin['organization_name'],
+            'organization_type' => (string)$admin['organization_type'],
+            'filial_name' => $admin['filial_name'] !== null ? (string)$admin['filial_name'] : null,
+            'filial_region' => $admin['filial_region'] !== null ? (string)$admin['filial_region'] : null,
+            'auth_source' => (string)$admin['auth_source'],
         ],
-        'stats' => [
-            'new' => (int)($statsRow['pending_count'] ?? 0),
-            'assigned' => (int)($statsRow['pending_count'] ?? 0),
-            'reviewed_24h' => 0,
-            'reviewed_7d' => 0,
-        ],
-        'organizations' => $organizations,
-        'filials' => $filials,
         'appeals' => $appeals,
     ]);
 } catch (Throwable $e) {

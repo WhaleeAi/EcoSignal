@@ -125,6 +125,32 @@ CREATE TABLE org_adm_refs (
     comment TEXT
 );
 
+CREATE TABLE appeal_assignments (
+    id SERIAL PRIMARY KEY,
+    appeal_id INT NOT NULL REFERENCES appeals(id) ON DELETE CASCADE,
+    organization_id BIGINT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    filial_id BIGINT NOT NULL REFERENCES filials(id) ON DELETE CASCADE,
+    responsible_org_admin_id BIGINT REFERENCES org_admins(id) ON DELETE SET NULL,
+    assigned_by INT NOT NULL REFERENCES users(id),
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(20) NOT NULL DEFAULT 'assigned'
+        CHECK (status IN ('assigned', 'resolved', 'rejected'))
+);
+
+CREATE TABLE appeal_chats (
+    id SERIAL PRIMARY KEY,
+    appeal_id INT NOT NULL REFERENCES appeals(id) ON DELETE CASCADE,
+    sender_user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    sender_org_admin_id BIGINT REFERENCES org_admins(id) ON DELETE CASCADE,
+    message TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_read BOOLEAN DEFAULT FALSE,
+    CHECK (
+        (sender_user_id IS NOT NULL AND sender_org_admin_id IS NULL) OR
+        (sender_user_id IS NULL AND sender_org_admin_id IS NOT NULL)
+    )
+);
+
 -- ----------------------------------------
 -- Тестовые данные для карты (можно запускать повторно)
 -- ----------------------------------------

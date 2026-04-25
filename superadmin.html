@@ -1,9 +1,9 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EcoSignal | РЎСѓРїРµСЂР°РґРјРёРЅ</title>
+    <title>EcoSignal | Суперадмин</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -14,7 +14,7 @@
   </head>
   <body>
     <div class="superadmin-page">
-      <aside class="super-sidebar" id="superSidebar" aria-label="Р‘РѕРєРѕРІРѕРµ РјРµРЅСЋ">
+      <aside class="super-sidebar" id="superSidebar" aria-label="Боковое меню">
         <div class="super-sidebar__top">
           <div class="super-sidebar__head">
             <button class="super-sidebar__brand" type="button" aria-label="EcoSignal">
@@ -25,14 +25,14 @@
               class="super-sidebar__toggle"
               id="superSidebarToggle"
               type="button"
-              aria-label="РЎРІРµСЂРЅСѓС‚СЊ РїР°РЅРµР»СЊ"
+              aria-label="Развернуть панель"
               aria-expanded="false"
             >
               <img src="./icons/aside-slider.svg" alt="" />
             </button>
           </div>
 
-          <nav class="super-sidebar__nav" aria-label="РќР°РІРёРіР°С†РёСЏ">
+          <nav class="super-sidebar__nav" aria-label="Навигация">
             <button
               class="super-sidebar__item super-sidebar__item--active"
               type="button"
@@ -40,67 +40,129 @@
               aria-current="page"
             >
               <img src="./icons/Home.svg" alt="" />
-              <span class="super-sidebar__label">РџР°РЅРµР»СЊ</span>
+              <span class="super-sidebar__label">Панель</span>
             </button>
             <button class="super-sidebar__item" type="button" data-href="superadmin_admins.html">
               <img src="./icons/my_appeals.svg" alt="" />
-              <span class="super-sidebar__label">РќР°Р·РЅР°С‡РµРЅРЅС‹Рµ Р°РґРјРёРЅС‹</span>
-            </button>
-            <button class="super-sidebar__item" type="button" data-action="logout">
-              <img src="./icons/logout.svg" alt="" />
-              <span class="super-sidebar__label">Р’С‹С…РѕРґ</span>
+              <span class="super-sidebar__label">Назначенные админы</span>
             </button>
           </nav>
         </div>
 
-        <div class="super-sidebar__spacer" id="superSidebarSpacer"></div>
-
-        <button class="super-sidebar__profile" type="button" aria-label="РџСЂРѕС„РёР»СЊ">
-          <span class="super-sidebar__avatar" id="superSidebarAvatar">S</span>
-          <span class="super-sidebar__profile-meta">
-            <span class="super-sidebar__profile-name" id="superSidebarName">РџСЂРѕС„РёР»СЊ</span>
-            <span class="super-sidebar__profile-role" id="superSidebarRole">superadmin</span>
-          </span>
-          <img class="super-sidebar__profile-arrow" src="./icons/arrow_down.svg" aria-hidden="true" />
-        </button>
+        <div class="super-sidebar__bottom">
+          <button class="super-sidebar__item super-sidebar__item--logout" type="button" data-action="logout">
+            <img src="./icons/logout.svg" alt="" />
+            <span class="super-sidebar__label">Выход</span>
+          </button>
+          <button class="super-sidebar__profile" type="button" aria-label="Профиль">
+            <span class="super-sidebar__avatar" id="superSidebarAvatar">S</span>
+            <span class="super-sidebar__profile-meta">
+              <span class="super-sidebar__profile-name" id="superSidebarName">Профиль</span>
+              <span class="super-sidebar__profile-role" id="superSidebarRole">superadmin</span>
+            </span>
+            <img class="super-sidebar__profile-arrow" src="./icons/arrow_down.svg" aria-hidden="true" />
+          </button>
+        </div>
       </aside>
 
-      <main class="super-content super-content--stacked">
+      <main class="super-content">
         <header class="super-header">
-          <h1 class="super-title">РџР°РЅРµР»СЊ СЃСѓРїРµСЂР°РґРјРёРЅР°</h1>
-          <p class="super-subtitle" id="organizationMeta">РћСЂРіР°РЅРёР·Р°С†РёСЏ: вЂ”</p>
+          <div class="super-header__info">
+            <h1 class="super-title">Панель суперадмина</h1>
+            <p class="super-subtitle" id="organizationMeta">Организация: —</p>
+          </div>
+          <div class="super-header__stats" id="superHeaderStats"></div>
         </header>
 
-        <section class="super-stats" id="superStats"></section>
+        <section class="super-main-grid">
+          <section class="super-block super-block--form">
+            <div class="super-block__head">
+              <h2>Добавить администратора</h2>
+            </div>
+            <form class="super-form" id="createAdminForm">
+              <input type="text" id="createAdminLogin" placeholder="Логин" required />
+              <input
+                type="password"
+                id="createAdminPassword"
+                placeholder="Пароль (мин. 6 символов)"
+                minlength="6"
+                required
+              />
 
-        <section class="super-block super-block--form">
-          <div class="super-block__head">
-            <h2>Р”РѕР±Р°РІРёС‚СЊ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°</h2>
-          </div>
-          <form class="super-form" id="createAdminForm">
-            <input type="text" id="createAdminLogin" placeholder="Р›РѕРіРёРЅ" required />
-            <input type="password" id="createAdminPassword" placeholder="РџР°СЂРѕР»СЊ (РјРёРЅ. 6 СЃРёРјРІРѕР»РѕРІ)" minlength="6" required />
-            <select id="createAdminFilial">
-              <option value="">Р‘РµР· РїСЂРёРІСЏР·РєРё Рє С„РёР»РёР°Р»Сѓ</option>
-            </select>
-            <input type="text" id="createAdminComment" placeholder="РљРѕРјРјРµРЅС‚Р°СЂРёР№ (РЅРµРѕР±СЏР·Р°С‚РµР»СЊРЅРѕ)" />
-            <button type="submit">Р”РѕР±Р°РІРёС‚СЊ admin</button>
-          </form>
-          <p class="super-feedback" id="createAdminFeedback"></p>
-        </section>
+              <div class="super-select" id="createAdminRoleWrap">
+                <button
+                  class="super-select__trigger"
+                  id="createAdminRoleTrigger"
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                  aria-controls="createAdminRoleList"
+                >
+                  <span class="super-select__value" id="createAdminRoleDisplay">Роль: admin</span>
+                  <span class="super-select__chevron" aria-hidden="true"></span>
+                </button>
+                <ul class="super-select__dropdown" id="createAdminRoleList" role="listbox" hidden></ul>
+                <select class="super-select__native" id="createAdminRole" required>
+                  <option value="admin">Роль: admin</option>
+                  <option value="superadmin">Роль: superadmin</option>
+                </select>
+              </div>
 
-        <section class="super-block">
-          <div class="super-block__head">
-            <h2>РўРµРєСѓС‰РёРµ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂС‹</h2>
-          </div>
-          <div class="super-grid super-grid--single-column" id="adminsGrid"></div>
-        </section>
+              <div class="super-select" id="createAdminOrganizationWrap">
+                <button
+                  class="super-select__trigger"
+                  id="createAdminOrganizationTrigger"
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                  aria-controls="createAdminOrganizationList"
+                >
+                  <span class="super-select__value" id="createAdminOrganizationDisplay">Выберите организацию</span>
+                  <span class="super-select__chevron" aria-hidden="true"></span>
+                </button>
+                <ul class="super-select__dropdown" id="createAdminOrganizationList" role="listbox" hidden></ul>
+                <select class="super-select__native" id="createAdminOrganization" required>
+                  <option value="">Выберите организацию</option>
+                </select>
+              </div>
 
-        <section class="super-block">
-          <div class="super-block__head">
-            <h2>РџРѕСЃР»РµРґРЅРёРµ РґРµР№СЃС‚РІРёСЏ</h2>
-          </div>
-          <div class="super-grid super-grid--single-column" id="actionsGrid"></div>
+              <div class="super-select" id="createAdminFilialWrap">
+                <button
+                  class="super-select__trigger"
+                  id="createAdminFilialTrigger"
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                  aria-controls="createAdminFilialList"
+                >
+                  <span class="super-select__value" id="createAdminFilialDisplay">Без привязки к филиалу</span>
+                  <span class="super-select__chevron" aria-hidden="true"></span>
+                </button>
+                <ul class="super-select__dropdown" id="createAdminFilialList" role="listbox" hidden></ul>
+                <select class="super-select__native" id="createAdminFilial">
+                  <option value="">Без привязки к филиалу</option>
+                </select>
+              </div>
+
+              <input type="text" id="createAdminComment" placeholder="Комментарий (необязательно)" />
+              <button type="submit">Создать</button>
+            </form>
+            <p class="super-feedback" id="createAdminFeedback"></p>
+          </section>
+
+          <section class="super-block">
+            <div class="super-block__head">
+              <h2>Текущие администраторы</h2>
+            </div>
+            <div class="super-grid" id="adminsGrid"></div>
+          </section>
+
+          <section class="super-block">
+            <div class="super-block__head">
+              <h2>Последние действия</h2>
+            </div>
+            <div class="super-grid" id="actionsGrid"></div>
+          </section>
         </section>
       </main>
     </div>

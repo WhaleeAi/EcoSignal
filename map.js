@@ -710,7 +710,7 @@
     }
 
     if (data?.user?.role === 'admin') {
-      window.location.replace('admin.html')
+      window.location.replace(data.user.auth_source === 'org_admins' ? 'agent.html' : 'admin.html')
       throw new Error('__redirect_admin__')
     }
 

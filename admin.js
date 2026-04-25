@@ -29,12 +29,19 @@
   const modalCarouselPrev = document.getElementById('appealModalCarouselPrev')
   const modalCarouselNext = document.getElementById('appealModalCarouselNext')
   const modalDescription = document.getElementById('appealModalDescription')
+  const modalMap = document.getElementById('appealModalMap')
+  const modalMapHint = document.getElementById('appealModalMapHint')
   const modalPriorityRadios = document.querySelectorAll('input[name="appealModalPriority"]')
-  const modalAgency = document.getElementById('appealModalAgency')
-  const modalAgencyTrigger = document.getElementById('appealModalAgencyTrigger')
-  const modalAgencyList = document.getElementById('appealModalAgencyList')
-  const modalAgencyDisplay = document.getElementById('appealModalAgencyDisplay')
-  const modalAgencyWrap = document.getElementById('appealModalAgencyWrap')
+  const modalOrganization = document.getElementById('appealModalOrganization')
+  const modalOrganizationTrigger = document.getElementById('appealModalOrganizationTrigger')
+  const modalOrganizationList = document.getElementById('appealModalOrganizationList')
+  const modalOrganizationDisplay = document.getElementById('appealModalOrganizationDisplay')
+  const modalOrganizationWrap = document.getElementById('appealModalOrganizationWrap')
+  const modalFilial = document.getElementById('appealModalFilial')
+  const modalFilialTrigger = document.getElementById('appealModalFilialTrigger')
+  const modalFilialList = document.getElementById('appealModalFilialList')
+  const modalFilialDisplay = document.getElementById('appealModalFilialDisplay')
+  const modalFilialWrap = document.getElementById('appealModalFilialWrap')
 
   const photoLightbox = document.getElementById('photoLightbox')
   const photoLightboxBackdrop = document.getElementById('photoLightboxBackdrop')
@@ -53,6 +60,12 @@
   const APPEAL_CARD_MIN_PX = 330
   const APPEAL_CARD_BASE_CAP_PX = 400
   const APPEAL_CARD_BASE_VW_RATIO = 0.25
+  const NEAREST_FILIALS_LIMIT = 5
+  const ORGANIZATION_TYPE_LABELS = {
+    federal: 'федеральный',
+    regional: 'региональный',
+    municipal: 'муниципальный',
+  }
 
   const PHOTO_PALETTE = [
     ['#f4dca1', '#d3bd8a'],
@@ -66,6 +79,13 @@
   const state = {
     appealsById: new Map(),
     currentAppealId: null,
+    dashboardAppeals: [],
+    dashboardStats: {},
+    organizations: [],
+    filials: [],
+    filialCoords: new Map(),
+    pendingGeocodes: new Map(),
+    mapRenderToken: 0,
   }
 
   const lightboxState = {
@@ -73,7 +93,13 @@
     index: 0,
   }
 
-  let agencyDropdownOpen = false
+  const customSelects = new Map()
+  const assignmentMapState = {
+    map: null,
+    readyPromise: null,
+    geoObjects: [],
+  }
+
   let lightboxTouchStartX = 0
 
   function toDataUrl(svgMarkup) {
@@ -130,6 +156,21 @@
     return toDataUrl(svg)
   }
 
+  function getOrganizationTypeLabel(type) {
+    return ORGANIZATION_TYPE_LABELS[String(type || '')] || String(type || '')
+  }
+
+  function formatOrganizationOptionLabel(organization) {
+    if (!organization) return 'Выберите орган'
+    const typeLabel = getOrganizationTypeLabel(organization.org_type)
+    return typeLabel ? `${organization.name} (${typeLabel})` : String(organization.name || '')
+  }
+
+  function formatFilialOptionLabel(filial) {
+    if (!filial) return 'Выберите филиал'
+    return filial.region ? `${filial.name} (${filial.region})` : String(filial.name || '')
+  }
+
   function getSelectedPriorityValue() {
     const selected = Array.from(modalPriorityRadios).find(input => input.checked)
     if (!selected) return NaN
@@ -150,58 +191,91 @@
     }
   }
 
-  function setAgencyDropdownOpen(open) {
-    agencyDropdownOpen = open
-    if (modalAgencyList) modalAgencyList.hidden = !open
-    if (modalAgencyTrigger) modalAgencyTrigger.setAttribute('aria-expanded', String(open))
-    if (modalAgencyWrap) modalAgencyWrap.classList.toggle('appeal-modal__select-wrap--open', open)
+  function closeAllCustomSelects(exceptSelectId = '') {
+    customSelects.forEach((config, selectId) => {
+      const isOpen = Boolean(exceptSelectId) && selectId === exceptSelectId && !config.select.disabled
+      config.list.hidden = !isOpen
+      config.trigger.setAttribute('aria-expanded', String(isOpen))
+      config.wrap.classList.toggle('appeal-modal__select-wrap--open', isOpen)
+    })
   }
 
-  function syncAgencyDisplayFromSelect() {
-    if (!modalAgency || !modalAgencyDisplay) return
-    const opt = modalAgency.selectedOptions[0]
-    modalAgencyDisplay.textContent = opt ? opt.textContent : 'Выберите орган'
+  function syncCustomSelectDisplay(selectId) {
+    const config = customSelects.get(selectId)
+    if (!config) return
+
+    const placeholder = String(config.select.dataset.placeholder || 'Выберите значение')
+    const opt = config.select.selectedOptions[0]
+    config.display.textContent = opt ? opt.textContent : placeholder
+    config.trigger.disabled = config.select.disabled
   }
 
-  function closeAgencyDropdown() {
-    setAgencyDropdownOpen(false)
-  }
+  function rebuildCustomSelectOptions(selectId) {
+    const config = customSelects.get(selectId)
+    if (!config) return
 
-  function toggleAgencyDropdown() {
-    setAgencyDropdownOpen(!agencyDropdownOpen)
-  }
+    config.list.textContent = ''
 
-  function setupAgencyCustomSelect() {
-    if (!modalAgency || !modalAgencyList || !modalAgencyTrigger) return
-
-    modalAgencyList.textContent = ''
-    Array.from(modalAgency.options).forEach((option, index) => {
+    Array.from(config.select.options).forEach((option, index) => {
       const item = document.createElement('li')
       item.className = 'appeal-modal__select-option'
       item.setAttribute('role', 'option')
       item.dataset.value = option.value
-      item.id = `appealModalAgencyOpt_${index}`
+      item.id = `${selectId}Opt_${index}`
       item.textContent = option.textContent
+      item.setAttribute('aria-selected', option.selected ? 'true' : 'false')
+      item.setAttribute('aria-disabled', option.disabled ? 'true' : 'false')
       item.addEventListener('click', () => {
-        modalAgency.selectedIndex = index
-        modalAgency.dispatchEvent(new Event('change', { bubbles: true }))
-        syncAgencyDisplayFromSelect()
-        closeAgencyDropdown()
+        if (option.disabled) return
+        config.select.selectedIndex = index
+        config.select.dispatchEvent(new Event('change', { bubbles: true }))
+        closeAllCustomSelects()
       })
-      modalAgencyList.append(item)
+      config.list.append(item)
     })
 
-    modalAgencyTrigger.addEventListener('click', event => {
+    syncCustomSelectDisplay(selectId)
+  }
+
+  function registerCustomSelect({ select, wrap, trigger, list, display }) {
+    if (!select || !wrap || !trigger || !list || !display) return
+
+    customSelects.set(select.id, { select, wrap, trigger, list, display })
+
+    trigger.addEventListener('click', event => {
       event.preventDefault()
       event.stopPropagation()
-      toggleAgencyDropdown()
+      const isOpen = !list.hidden
+      closeAllCustomSelects(isOpen ? '' : select.id)
     })
 
-    document.addEventListener('click', () => closeAgencyDropdown())
+    wrap.addEventListener('click', event => event.stopPropagation())
+    select.addEventListener('change', () => syncCustomSelectDisplay(select.id))
 
-    modalAgencyWrap?.addEventListener('click', event => event.stopPropagation())
+    rebuildCustomSelectOptions(select.id)
+  }
 
-    syncAgencyDisplayFromSelect()
+  function setupCustomSelects() {
+    registerCustomSelect({
+      select: modalOrganization,
+      wrap: modalOrganizationWrap,
+      trigger: modalOrganizationTrigger,
+      list: modalOrganizationList,
+      display: modalOrganizationDisplay,
+    })
+
+    registerCustomSelect({
+      select: modalFilial,
+      wrap: modalFilialWrap,
+      trigger: modalFilialTrigger,
+      list: modalFilialList,
+      display: modalFilialDisplay,
+    })
+
+    document.addEventListener('click', () => closeAllCustomSelects())
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') closeAllCustomSelects()
+    })
   }
 
   function updateLightboxView() {
@@ -566,6 +640,359 @@
     updateCarouselArrowState()
   }
 
+  function setMapHint(text) {
+    if (modalMapHint) {
+      modalMapHint.textContent = text
+    }
+  }
+
+  function getSelectedOrganizationId() {
+    return Number(modalOrganization?.value || 0) || 0
+  }
+
+  function getSelectedFilialId() {
+    return Number(modalFilial?.value || 0) || 0
+  }
+
+  function getAppealCoords(appeal) {
+    const latitude = Number(appeal?.latitude)
+    const longitude = Number(appeal?.longitude)
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return null
+    }
+
+    return [latitude, longitude]
+  }
+
+  function clearAssignmentMapObjects() {
+    if (!assignmentMapState.map) return
+
+    assignmentMapState.geoObjects.forEach(geoObject => {
+      assignmentMapState.map.geoObjects.remove(geoObject)
+    })
+    assignmentMapState.geoObjects = []
+  }
+
+  async function ensureAssignmentMapReady() {
+    if (!modalMap) return null
+    if (assignmentMapState.map) return assignmentMapState.map
+    if (assignmentMapState.readyPromise) return assignmentMapState.readyPromise
+
+    if (!window.ymaps) {
+      setMapHint('Карта недоступна: API Яндекс Карт не загрузился.')
+      return null
+    }
+
+    assignmentMapState.readyPromise = new Promise(resolve => {
+      ymaps.ready(() => {
+        if (assignmentMapState.map) {
+          resolve(assignmentMapState.map)
+          return
+        }
+
+        const map = new ymaps.Map(
+          'appealModalMap',
+          {
+            center: [55.751244, 37.618423],
+            zoom: 10,
+            controls: ['zoomControl'],
+          },
+          {
+            suppressMapOpenBlock: true,
+          }
+        )
+
+        map.behaviors.disable('scrollZoom')
+        assignmentMapState.map = map
+        resolve(map)
+      })
+    })
+
+    return assignmentMapState.readyPromise
+  }
+
+  function buildFilialGeocodeQuery(filial) {
+    return [filial?.address, filial?.region, 'Россия'].filter(Boolean).join(', ')
+  }
+
+  async function getFilialCoords(filial) {
+    const filialId = String(filial?.id || '')
+    if (!filialId) return null
+
+    if (state.filialCoords.has(filialId)) {
+      return state.filialCoords.get(filialId)
+    }
+
+    const pending = state.pendingGeocodes.get(filialId)
+    if (pending) {
+      return pending
+    }
+
+    if (!window.ymaps?.geocode) {
+      return null
+    }
+
+    const geocodeRequest = ymaps
+      .geocode(buildFilialGeocodeQuery(filial), { results: 1 })
+      .then(result => {
+        const first = result.geoObjects.get(0)
+        if (!first) return null
+
+        const coords = first.geometry.getCoordinates()
+        if (!Array.isArray(coords) || coords.length !== 2) {
+          return null
+        }
+
+        return [Number(coords[0]), Number(coords[1])]
+      })
+      .catch(() => null)
+      .then(coords => {
+        state.pendingGeocodes.delete(filialId)
+        state.filialCoords.set(filialId, coords)
+        return coords
+      })
+
+    state.pendingGeocodes.set(filialId, geocodeRequest)
+    return geocodeRequest
+  }
+
+  function haversineDistanceKm(fromCoords, toCoords) {
+    const [fromLat, fromLon] = fromCoords
+    const [toLat, toLon] = toCoords
+    const toRadians = value => (value * Math.PI) / 180
+    const earthRadiusKm = 6371
+    const deltaLat = toRadians(toLat - fromLat)
+    const deltaLon = toRadians(toLon - fromLon)
+    const a =
+      Math.sin(deltaLat / 2) ** 2 +
+      Math.cos(toRadians(fromLat)) * Math.cos(toRadians(toLat)) * Math.sin(deltaLon / 2) ** 2
+
+    return 2 * earthRadiusKm * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  }
+
+  function renderOrganizationSelect(selectedOrganizationId = 0) {
+    if (!modalOrganization) return
+
+    modalOrganization.dataset.placeholder = 'Выберите орган'
+    modalOrganization.textContent = ''
+
+    const firstOption = document.createElement('option')
+    firstOption.value = ''
+    firstOption.textContent = 'Выберите орган'
+    modalOrganization.append(firstOption)
+
+    state.organizations.forEach(organization => {
+      const option = document.createElement('option')
+      option.value = String(organization.id)
+      option.textContent = formatOrganizationOptionLabel(organization)
+      modalOrganization.append(option)
+    })
+
+    modalOrganization.value = selectedOrganizationId > 0 ? String(selectedOrganizationId) : ''
+    rebuildCustomSelectOptions(modalOrganization.id)
+  }
+
+  function renderFilialSelect(selectedOrganizationId = getSelectedOrganizationId(), selectedFilialId = 0) {
+    if (!modalFilial) return
+
+    modalFilial.textContent = ''
+
+    const firstOption = document.createElement('option')
+    firstOption.value = ''
+
+    if (selectedOrganizationId > 0) {
+      firstOption.textContent = 'Выберите филиал'
+      modalFilial.dataset.placeholder = 'Выберите филиал'
+      modalFilial.disabled = false
+    } else {
+      firstOption.textContent = 'Сначала выберите орган'
+      modalFilial.dataset.placeholder = 'Сначала выберите орган'
+      modalFilial.disabled = true
+    }
+
+    modalFilial.append(firstOption)
+
+    if (selectedOrganizationId > 0) {
+      state.filials
+        .filter(filial => Number(filial.organization_id) === selectedOrganizationId && Boolean(filial.is_active))
+        .forEach(filial => {
+          const option = document.createElement('option')
+          option.value = String(filial.id)
+          option.textContent = formatFilialOptionLabel(filial)
+          modalFilial.append(option)
+        })
+    }
+
+    modalFilial.value = selectedFilialId > 0 ? String(selectedFilialId) : ''
+    if (modalFilial.value !== String(selectedFilialId)) {
+      modalFilial.value = ''
+    }
+
+    rebuildCustomSelectOptions(modalFilial.id)
+  }
+
+  function applyAssignmentSelection(organizationId = 0, filialId = 0) {
+    if (modalOrganization) {
+      modalOrganization.value = organizationId > 0 ? String(organizationId) : ''
+    }
+
+    renderFilialSelect(organizationId, filialId)
+
+    if (modalFilial) {
+      modalFilial.value = filialId > 0 ? String(filialId) : ''
+    }
+
+    if (modalOrganization) {
+      syncCustomSelectDisplay(modalOrganization.id)
+    }
+    if (modalFilial) {
+      syncCustomSelectDisplay(modalFilial.id)
+    }
+  }
+
+  async function getRenderableFilials(appealCoords, organizationId) {
+    const candidateFilials = state.filials.filter(filial => {
+      if (!filial?.is_active) return false
+      if (organizationId > 0) {
+        return Number(filial.organization_id) === organizationId
+      }
+      return true
+    })
+
+    const resolvedFilials = await Promise.all(
+      candidateFilials.map(async filial => ({
+        ...filial,
+        coords: await getFilialCoords(filial),
+      }))
+    )
+
+    const filialsWithCoords = resolvedFilials.filter(filial => {
+      return Array.isArray(filial.coords) && filial.coords.length === 2
+    })
+
+    if (organizationId > 0) {
+      return filialsWithCoords.sort((left, right) => {
+        return String(left.name || '').localeCompare(String(right.name || ''), 'ru')
+      })
+    }
+
+    return filialsWithCoords
+      .map(filial => ({
+        ...filial,
+        distanceKm: haversineDistanceKm(appealCoords, filial.coords),
+      }))
+      .filter(filial => Number.isFinite(filial.distanceKm))
+      .sort((left, right) => left.distanceKm - right.distanceKm)
+      .slice(0, NEAREST_FILIALS_LIMIT)
+  }
+
+  async function renderAppealAssignmentMap() {
+    const appeal = state.appealsById.get(String(state.currentAppealId))
+    if (!appeal) return
+
+    const appealCoords = getAppealCoords(appeal)
+    if (!appealCoords) {
+      clearAssignmentMapObjects()
+      setMapHint('У заявки нет координат, поэтому карта недоступна.')
+      return
+    }
+
+    const map = await ensureAssignmentMapReady()
+    if (!map) return
+
+    const renderToken = ++state.mapRenderToken
+    const selectedOrganizationId = getSelectedOrganizationId()
+    const selectedFilialId = getSelectedFilialId()
+    const selectedOrganization = state.organizations.find(
+      organization => Number(organization.id) === selectedOrganizationId
+    )
+
+    clearAssignmentMapObjects()
+
+    const appealPlacemark = new ymaps.Placemark(
+      appealCoords,
+      {
+        hintContent: `Заявка #${appeal.id}`,
+        balloonContent: `Заявка #${appeal.id}`,
+      },
+      {
+        preset: 'islands#redIcon',
+      }
+    )
+
+    assignmentMapState.geoObjects.push(appealPlacemark)
+    map.geoObjects.add(appealPlacemark)
+
+    setMapHint(
+      selectedOrganizationId > 0
+        ? 'Загружаем филиалы выбранного надзорного органа...'
+        : 'Подбираем ближайшие филиалы к заявке...'
+    )
+
+    const filialMarkers = await getRenderableFilials(appealCoords, selectedOrganizationId)
+    if (renderToken !== state.mapRenderToken) return
+
+    const boundsPoints = [appealCoords]
+    filialMarkers.forEach(filial => {
+      const placemark = new ymaps.Placemark(
+        filial.coords,
+        {
+          hintContent: `${filial.name}${filial.region ? `, ${filial.region}` : ''}`,
+          balloonContent: [
+            `<strong>${filial.name}</strong>`,
+            filial.region ? `<div>${filial.region}</div>` : '',
+            filial.address ? `<div>${filial.address}</div>` : '',
+          ].join(''),
+        },
+        {
+          preset:
+            Number(filial.id) === selectedFilialId
+              ? 'islands#blueCircleDotIcon'
+              : 'islands#greenCircleDotIcon',
+        }
+      )
+
+      placemark.events.add('click', () => {
+        applyAssignmentSelection(Number(filial.organization_id), Number(filial.id))
+        renderAppealAssignmentMap().catch(() => {
+          setMapHint('Не удалось обновить карту после выбора филиала.')
+        })
+      })
+
+      assignmentMapState.geoObjects.push(placemark)
+      map.geoObjects.add(placemark)
+      boundsPoints.push(filial.coords)
+    })
+
+    if (boundsPoints.length > 1) {
+      map.setBounds(ymaps.util.bounds.fromPoints(boundsPoints), {
+        checkZoomRange: true,
+        zoomMargin: [28, 28, 28, 28],
+      })
+    } else {
+      map.setCenter(appealCoords, 14, { duration: 200 })
+    }
+
+    if (!filialMarkers.length) {
+      setMapHint(
+        selectedOrganizationId > 0
+          ? 'У выбранного органа не удалось показать филиалы на карте.'
+          : 'Не удалось найти ближайшие филиалы для этой заявки.'
+      )
+      return
+    }
+
+    if (selectedOrganizationId > 0) {
+      setMapHint(
+        `Показываем филиалы организации «${selectedOrganization?.name || 'Выбранный орган'}».`
+      )
+      return
+    }
+
+    setMapHint(`Показываем ${filialMarkers.length} ближайших филиалов к заявке.`)
+  }
+
   function openAppealModal(appealId) {
     if (!modal) return
     const appeal = state.appealsById.get(String(appealId))
@@ -617,26 +1044,78 @@
       window.requestAnimationFrame(() => updateCarouselArrowState())
     }
 
-    setSelectedPriorityValue(Number(appeal.priority || 0))
+    const assignment = appeal.assignment || null
+    const selectedOrganizationId = Number(assignment?.organization_id || 0)
+    const selectedFilialId = Number(assignment?.filial_id || 0)
 
-    if (modalAgency) {
-      modalAgency.value = ''
-    }
-    syncAgencyDisplayFromSelect()
-    closeAgencyDropdown()
+    setSelectedPriorityValue(Number(appeal.priority || 1))
+    renderOrganizationSelect(selectedOrganizationId)
+    renderFilialSelect(selectedOrganizationId, selectedFilialId)
+    closeAllCustomSelects()
 
     setModalMessage('')
     modal.classList.add('appeal-drawer--open')
     modal.setAttribute('aria-hidden', 'false')
+
+    if (window.ymaps) {
+      setMapHint('Подготавливаем карту...')
+      renderAppealAssignmentMap().catch(() => {
+        setMapHint('Не удалось отрисовать карту заявки.')
+      })
+    } else {
+      setMapHint('Карта недоступна: API Яндекс Карт не загрузился.')
+    }
   }
 
   function closeAppealModal() {
     if (!modal) return
-    closeAgencyDropdown()
+    closeAllCustomSelects()
     modal.classList.remove('appeal-drawer--open')
     modal.setAttribute('aria-hidden', 'true')
     state.currentAppealId = null
+    state.mapRenderToken += 1
     setModalMessage('')
+  }
+
+  function syncDashboardAfterAppealUpdate(appealId, updatedAppeal) {
+    if (!Number.isFinite(Number(appealId)) || !updatedAppeal || typeof updatedAppeal !== 'object') {
+      return
+    }
+
+    const targetId = Number(appealId)
+    const nextStatus = String(updatedAppeal.status || '')
+    let statusChangedFromPending = false
+
+    state.dashboardAppeals = state.dashboardAppeals.map(appeal => {
+      if (Number(appeal?.id || 0) !== targetId) {
+        return appeal
+      }
+
+      const previousStatus = String(appeal?.status || 'pending')
+      if (previousStatus === 'pending' && nextStatus && nextStatus !== 'pending') {
+        statusChangedFromPending = true
+      }
+
+      return {
+        ...appeal,
+        ...updatedAppeal,
+        assignment:
+          updatedAppeal.assignment !== undefined ? updatedAppeal.assignment : appeal.assignment || null,
+        priority: Number(updatedAppeal.priority ?? appeal.priority ?? 0),
+        status: nextStatus || previousStatus,
+      }
+    })
+
+    if (statusChangedFromPending) {
+      state.dashboardStats = {
+        ...state.dashboardStats,
+        new: Math.max(0, Number(state.dashboardStats?.new || 0) - 1),
+        assigned: Math.max(0, Number(state.dashboardStats?.assigned || 0) - 1),
+      }
+    }
+
+    renderStats(state.dashboardStats)
+    renderAppeals(state.dashboardAppeals)
   }
 
   async function saveAppealModal() {
@@ -644,10 +1123,16 @@
     if (!appealId) return
 
     const priority = getSelectedPriorityValue()
-    const agencyName = String(modalAgency?.value || '')
+    const organizationId = getSelectedOrganizationId()
+    const filialId = getSelectedFilialId()
 
-    if (!Number.isInteger(priority) || priority < 0 || priority > 5) {
-      setModalMessage('Приоритет должен быть числом от 0 до 5.', true)
+    if (!Number.isInteger(priority) || priority < 1 || priority > 5) {
+      setModalMessage('Приоритет должен быть числом от 1 до 5.', true)
+      return
+    }
+
+    if ((organizationId > 0 && filialId <= 0) || (organizationId <= 0 && filialId > 0)) {
+      setModalMessage('Для назначения нужно выбрать и орган, и филиал.', true)
       return
     }
 
@@ -658,12 +1143,8 @@
     setModalMessage('Сохранение...')
 
     try {
-      const updated = await updateAppeal(appealId, priority, agencyName)
-      const current = state.appealsById.get(String(appealId))
-      if (current) {
-        current.priority = updated.priority
-        state.appealsById.set(String(appealId), current)
-      }
+      const updated = await updateAppeal(appealId, priority, organizationId || null, filialId || null)
+      syncDashboardAfterAppealUpdate(appealId, updated)
 
       setModalMessage('Изменения сохранены.')
       window.setTimeout(() => closeAppealModal(), 450)
@@ -684,9 +1165,22 @@
     document.addEventListener('keydown', event => {
       if (event.key !== 'Escape') return
       if (photoLightbox && !photoLightbox.hidden) return
-      if (agencyDropdownOpen) {
-        closeAgencyDropdown()
-      }
+      closeAllCustomSelects()
+    })
+  }
+
+  function setupAssignmentFormHandlers() {
+    modalOrganization?.addEventListener('change', () => {
+      renderFilialSelect(getSelectedOrganizationId())
+      renderAppealAssignmentMap().catch(() => {
+        setMapHint('Не удалось обновить карту после выбора органа.')
+      })
+    })
+
+    modalFilial?.addEventListener('change', () => {
+      renderAppealAssignmentMap().catch(() => {
+        setMapHint('Не удалось обновить карту после выбора филиала.')
+      })
     })
   }
 
@@ -726,6 +1220,11 @@
       throw new Error('__redirect_superadmin__')
     }
 
+    if (data.user.role === 'admin' && data.user.auth_source === 'org_admins') {
+      window.location.replace('agent.html')
+      throw new Error('__redirect_agent__')
+    }
+
     if (data.user.role !== 'admin') {
       window.location.replace('map.html')
       throw new Error('__redirect_non_admin__')
@@ -749,7 +1248,7 @@
         throw new Error('__redirect_login__')
       }
       if (response.status === 403) {
-        window.location.replace('map.html')
+        window.location.replace('agent.html')
         throw new Error('__redirect_non_admin__')
       }
       throw new Error(data.message || 'Не удалось загрузить данные панели')
@@ -758,7 +1257,7 @@
     return data
   }
 
-  async function updateAppeal(appealId, priority, agencyName) {
+  async function updateAppeal(appealId, priority, organizationId, filialId) {
     const response = await fetch('backend/admin_update_appeal.php', {
       method: 'POST',
       headers: {
@@ -768,7 +1267,8 @@
       body: JSON.stringify({
         appeal_id: appealId,
         priority,
-        agency_name: agencyName,
+        organization_id: organizationId,
+        filial_id: filialId,
       }),
     })
 
@@ -844,10 +1344,11 @@
     setupSidebarActions()
     setupSidebarToggle()
     setupAppealsGridLayout()
-    setupAgencyCustomSelect()
+    setupCustomSelects()
     setupAppealCarousel()
     setupPhotoLightbox()
     setupModalHandlers()
+    setupAssignmentFormHandlers()
     setupAppealCardsHandler()
 
     try {
@@ -855,14 +1356,23 @@
       const dashboard = await loadDashboardData()
       const dashboardUser = dashboard?.user || authUser
 
+      state.organizations = Array.isArray(dashboard?.organizations) ? dashboard.organizations : []
+      state.filials = Array.isArray(dashboard?.filials) ? dashboard.filials : []
+      state.dashboardStats = dashboard?.stats && typeof dashboard.stats === 'object' ? dashboard.stats : {}
+      state.dashboardAppeals = Array.isArray(dashboard?.appeals) ? dashboard.appeals : []
+
+      renderOrganizationSelect()
+      renderFilialSelect()
+
       setupProfileBadge(dashboardUser)
-      renderStats(dashboard?.stats || {})
-      renderAppeals(dashboard?.appeals || [])
+      renderStats(state.dashboardStats)
+      renderAppeals(state.dashboardAppeals)
     } catch (error) {
       if (
         error?.message === '__redirect_login__' ||
         error?.message === '__redirect_non_admin__' ||
-        error?.message === '__redirect_superadmin__'
+        error?.message === '__redirect_superadmin__' ||
+        error?.message === '__redirect_agent__'
       ) {
         return
       }

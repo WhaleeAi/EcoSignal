@@ -2,7 +2,7 @@
   --font-family: "Roboto Flex", sans-serif;
   --second-family: "Roboto Slab", serif;
 
-  --bg-main: #fafaf5;
+  --bg-main: #F8F8F6;
   --bg-card: #ffffff;
   --text-main: #141413;
   --text-secondary: #5e5d59;
@@ -316,15 +316,15 @@ body {
 }
 
 .appeal-card--status-in-progress {
-  border-color: #5b6fd8;
+  border-color: #D1A041;
 }
 
 .appeal-card--status-resolved {
-  border-color: #2d7a3e;
+  border-color: #599130;
 }
 
 .appeal-card--status-rejected {
-  border-color: #b54545;
+  border-color: #B53333;
 }
 
 .appeals-section {
@@ -379,6 +379,38 @@ body {
 .appeal-card:hover {
   background: #f9f9f4;
   border-color: #9f9f9c;
+}
+
+.appeal-card.appeal-card--status-confirmed {
+  border-color: #2a6b8f;
+}
+
+.appeal-card.appeal-card--status-in-progress {
+  border-color: #D1A041;
+}
+
+.appeal-card.appeal-card--status-resolved {
+  border-color: #599130;
+}
+
+.appeal-card.appeal-card--status-rejected {
+  border-color: #B53333;
+}
+
+.appeal-card--status-confirmed:hover {
+  border-color: #2a6b8f;
+}
+
+.appeal-card--status-in-progress:hover {
+  border-color: #D1A041;
+}
+
+.appeal-card--status-resolved:hover {
+  border-color: #599130;
+}
+
+.appeal-card--status-rejected:hover {
+  border-color: #B53333;
 }
 
 .appeal-card__top {
@@ -675,6 +707,45 @@ body {
   color: var(--text-main);
 }
 
+.appeal-modal__map-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.appeal-modal__map-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.appeal-modal__map-title,
+.appeal-modal__map-hint {
+  margin: 0;
+}
+
+.appeal-modal__map-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.appeal-modal__map-hint {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--text-secondary);
+}
+
+.appeal-modal__map {
+  height: 220px;
+  border: 1px solid var(--stroke-main);
+  border-radius: 16px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top left, rgba(176, 205, 170, 0.45), transparent 42%),
+    linear-gradient(180deg, #f8f6f1 0%, #ebe8dd 100%);
+}
+
 .appeal-modal__field {
   display: flex;
   flex-direction: column;
@@ -719,6 +790,12 @@ body {
   color: var(--text-main);
   cursor: pointer;
   text-align: left;
+}
+
+.appeal-modal__select-trigger:disabled {
+  background: #f4f2eb;
+  color: var(--text-secondary);
+  cursor: not-allowed;
 }
 
 .appeal-modal__select-value {
@@ -773,8 +850,17 @@ body {
   cursor: pointer;
 }
 
+.appeal-modal__select-option[aria-selected='true'] {
+  background: #eef3e7;
+}
+
 .appeal-modal__select-option:hover {
   background: #f0eee6;
+}
+
+.appeal-modal__select-option[aria-disabled='true'] {
+  color: #99958a;
+  cursor: default;
 }
 
 .appeal-modal__select-native {
@@ -842,6 +928,15 @@ body {
 .appeal-modal__priority-option:has(input[type="radio"]:checked) {
   background: #f0eee6;
   border-color: #437426;
+}
+
+.appeal-modal__priority-option:has(input[type="radio"]:disabled) {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.appeal-modal__priority-option:has(input[type="radio"]:disabled):hover {
+  background: #fff;
 }
 
 .appeal-modal__priority-option input {
@@ -1015,6 +1110,58 @@ body {
   }
 }
 
+@media (max-width: 1100px) {
+  .my-appeals-page {
+    overflow: auto;
+  }
+
+  .my-appeals-page .admin-page {
+    min-height: 100dvh;
+    height: auto;
+  }
+
+  .my-appeals-page .admin-workspace {
+    min-height: 100dvh;
+    flex-wrap: wrap;
+    align-content: flex-start;
+  }
+
+  .my-appeals-page .admin-content {
+    flex: 1 1 100%;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .my-appeals-page .agent-chat-drawer,
+  .my-appeals-page .appeal-drawer {
+    order: 2;
+    flex: 1 1 50%;
+    height: min(72dvh, 680px);
+    align-self: auto;
+  }
+
+  .my-appeals-page .agent-chat-drawer:not(.agent-chat-drawer--open),
+  .my-appeals-page .appeal-drawer:not(.appeal-drawer--open) {
+    flex-basis: 0;
+    height: 0;
+  }
+
+  .my-appeals-page .agent-chat-drawer--open {
+    width: auto;
+    min-width: min(360px, 100%);
+  }
+
+  .my-appeals-page .appeal-drawer--open {
+    width: auto;
+    min-width: min(360px, 100%);
+  }
+
+  .my-appeals-page .agent-chat-drawer__surface,
+  .my-appeals-page .appeal-drawer__surface {
+    width: 100%;
+  }
+}
+
 @media (max-width: 860px) {
   .admin-content {
     padding: 20px;
@@ -1035,6 +1182,21 @@ body {
 }
 
 @media (max-width: 560px) {
+  .my-appeals-page .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 30;
+  }
+
+  .my-appeals-page .sidebar--expanded {
+    width: min(250px, calc(100vw - 32px));
+    box-shadow: 20px 0 50px rgba(20, 20, 19, 0.18);
+  }
+
+  .my-appeals-page .admin-workspace {
+    padding-left: 52px;
+  }
+
   .admin-content {
     padding: 16px;
     gap: 14px;
@@ -1060,6 +1222,35 @@ body {
   .appeal-modal__image {
     width: 160px;
     height: 160px;
+  }
+
+  .appeal-modal__map {
+    height: 200px;
+  }
+
+  .my-appeals-page .appeals-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .my-appeals-page .appeal-card__top {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .my-appeals-page .appeal-card__images {
+    width: 100%;
+  }
+
+  .my-appeals-page .agent-chat-drawer,
+  .my-appeals-page .appeal-drawer {
+    flex: 1 1 100%;
+    height: auto;
+    min-height: min(74dvh, 620px);
+  }
+
+  .my-appeals-page .agent-chat-drawer--open,
+  .my-appeals-page .appeal-drawer--open {
+    min-width: 0;
   }
 }
 
