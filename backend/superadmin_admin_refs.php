@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 }
 
 $user = requireAuth();
-if (($user['auth_source'] ?? '') !== 'org_admins' || ($user['role'] ?? '') !== 'superadmin') {
+if (($user['role'] ?? '') !== 'superadmin') {
     jsonResponse(['message' => 'Only superadmin has access'], 403);
 }
 

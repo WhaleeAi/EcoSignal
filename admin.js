@@ -13,8 +13,23 @@
   const sidebar = document.getElementById('sidebar')
   const sidebarToggle = document.getElementById('sidebarToggle')
   const sidebarAvatar = document.getElementById('sidebarAvatar')
+  const sidebarProfileButton = document.getElementById('sidebarProfileButton')
   const sidebarProfileName = document.querySelector('.sidebar-profile-name')
   const sidebarProfileLevel = document.querySelector('.sidebar-profile-level')
+  const profileModal = document.getElementById('profileModal')
+  const profileModalBackdrop = document.getElementById('profileModalBackdrop')
+  const profileModalClose = document.getElementById('profileModalClose')
+  const profileModalCancel = document.getElementById('profileModalCancel')
+  const profileModalForm = document.getElementById('profileModalForm')
+  const profileModalMessage = document.getElementById('profileModalMessage')
+  const profileFullName = document.getElementById('profileFullName')
+  const profileEmailLabel = document.getElementById('profileEmailLabel')
+  const profileEmail = document.getElementById('profileEmail')
+  const profilePassword = document.getElementById('profilePassword')
+  const profileAbout = document.getElementById('profileAbout')
+  const profileRole = document.getElementById('profileRole')
+  const profileCreatedAt = document.getElementById('profileCreatedAt')
+  const profileModalSave = document.getElementById('profileModalSave')
 
   const modal = document.getElementById('appealModal')
   const modalClose = document.getElementById('appealModalClose')
@@ -102,6 +117,9 @@
   }
 
   let lightboxTouchStartX = 0
+  let currentUser = null
+  let profileModalCloseTimer = 0
+  const PROFILE_MODAL_CLOSE_DELAY = 95
 
   function toDataUrl(svgMarkup) {
     return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svgMarkup)}`
@@ -122,6 +140,144 @@
     if (user.name) return String(user.name)
     if (user.email) return String(user.email)
     return 'Администратор'
+  }
+
+  function formatDate(value) {
+    if (!value) return '—'
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return String(value)
+    return date.toLocaleDateString('ru-RU', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+  }
+
+  function setProfileModalMessage(text, isError = false) {
+    if (!profileModalMessage) return
+    profileModalMessage.textContent = text
+    profileModalMessage.classList.toggle('error', isError)
+  }
+
+  function fillProfileModal(user) {
+    const profile = user && typeof user === 'object' ? user : {}
+    const displayName = getUserDisplayName(profile)
+    const usesOrgAdminAuth = String(profile.auth_source || '') === 'org_admins'
+    if (profileFullName) {
+      profileFullName.value = displayName === 'Администратор' ? '' : displayName
+      profileFullName.readOnly = usesOrgAdminAuth
+    }
+    if (profileEmailLabel) profileEmailLabel.textContent = usesOrgAdminAuth ? 'Логин' : 'Email'
+    if (profileEmail) {
+      profileEmail.type = usesOrgAdminAuth ? 'text' : 'email'
+      profileEmail.value = String((usesOrgAdminAuth ? profile.login : profile.email) || profile.email || profile.login || '').trim()
+    }
+    if (profilePassword) profilePassword.value = ''
+    if (profileAbout) {
+      profileAbout.value = String(profile.about || '').trim()
+      profileAbout.readOnly = usesOrgAdminAuth
+    }
+    if (profileRole) profileRole.textContent = 'Администратор'
+    if (profileCreatedAt) profileCreatedAt.textContent = formatDate(profile.created_at)
+  }
+
+  function finalizeProfileModalClose() {
+    if (!profileModal) return
+    profileModal.hidden = true
+    setProfileModalMessage('')
+  }
+
+  function openProfileModal() {
+    if (!profileModal) return
+    if (profileModalCloseTimer) {
+      window.clearTimeout(profileModalCloseTimer)
+      profileModalCloseTimer = 0
+    }
+    fillProfileModal(currentUser)
+    setProfileModalMessage('')
+    profileModal.hidden = false
+    document.body.style.overflow = 'hidden'
+    window.requestAnimationFrame(() => {
+      profileModal.classList.add('profile-modal--open')
+      profileFullName?.focus()
+    })
+  }
+
+  function closeProfileModal() {
+    if (!profileModal) return
+    profileModal.classList.remove('profile-modal--open')
+    document.body.style.overflow = ''
+    if (profileModalCloseTimer) {
+      window.clearTimeout(profileModalCloseTimer)
+    }
+    profileModalCloseTimer = window.setTimeout(() => {
+      finalizeProfileModalClose()
+      profileModalCloseTimer = 0
+    }, PROFILE_MODAL_CLOSE_DELAY)
+  }
+
+  function setupProfileModal() {
+    if (!profileModal) return
+
+    sidebarProfileButton?.addEventListener('click', openProfileModal)
+    profileModalBackdrop?.addEventListener('click', closeProfileModal)
+    profileModalClose?.addEventListener('click', closeProfileModal)
+    profileModalCancel?.addEventListener('click', closeProfileModal)
+    profileModalForm?.addEventListener('submit', event => {
+      event.preventDefault()
+      saveProfile()
+    })
+
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && profileModal && !profileModal.hidden) {
+        event.preventDefault()
+        closeProfileModal()
+      }
+    })
+  }
+
+  async function saveProfile() {
+    const payload = {
+      fullname: String(profileFullName?.value || '').trim(),
+      email: String(profileEmail?.value || '').trim(),
+      login: String(profileEmail?.value || '').trim(),
+      password: String(profilePassword?.value || '').trim(),
+      about: String(profileAbout?.value || '').trim(),
+    }
+
+    setProfileModalMessage('')
+    if (profileModalSave) profileModalSave.disabled = true
+
+    try {
+      const response = await fetch('backend/update_profile.php', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(data.message || 'Не удалось сохранить профиль')
+      }
+
+      currentUser = data?.user || currentUser
+      try {
+        localStorage.setItem('user', JSON.stringify(currentUser))
+      } catch (_error) {
+        // no-op
+      }
+
+      setupProfileBadge(currentUser)
+      fillProfileModal(currentUser)
+      setProfileModalMessage('Профиль сохранён')
+    } catch (error) {
+      setProfileModalMessage(error?.message || 'Не удалось сохранить профиль', true)
+    } finally {
+      if (profileModalSave) profileModalSave.disabled = false
+    }
   }
 
   function getToneBySeed(seedValue) {
@@ -1362,6 +1518,7 @@
   async function init() {
     setupSidebarActions()
     setupSidebarToggle()
+    setupProfileModal()
     setupAppealsGridLayout()
     setupCustomSelects()
     setupAppealCarousel()
@@ -1374,6 +1531,7 @@
       const authUser = await ensureAdmin()
       const dashboard = await loadDashboardData()
       const dashboardUser = dashboard?.user || authUser
+      currentUser = dashboardUser
 
       state.organizations = Array.isArray(dashboard?.organizations) ? dashboard.organizations : []
       state.filials = Array.isArray(dashboard?.filials) ? dashboard.filials : []
@@ -1396,6 +1554,7 @@
         return
       }
 
+      currentUser = null
       setupProfileBadge({})
       renderStats({})
       renderErrorState(error?.message || 'Не удалось загрузить данные.')

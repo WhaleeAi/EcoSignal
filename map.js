@@ -58,14 +58,15 @@
   const profileModalClose = document.getElementById('profileModalClose')
   const profileModalCancel = document.getElementById('profileModalCancel')
   const profileModalForm = document.getElementById('profileModalForm')
-  const profileModalAvatar = document.getElementById('profileModalAvatar')
   const profileModalMessage = document.getElementById('profileModalMessage')
   const profileFullName = document.getElementById('profileFullName')
   const profileEmail = document.getElementById('profileEmail')
+  const profilePassword = document.getElementById('profilePassword')
   const profileAbout = document.getElementById('profileAbout')
   const profileRole = document.getElementById('profileRole')
   const profileCreatedAt = document.getElementById('profileCreatedAt')
   const profileModalSave = document.getElementById('profileModalSave')
+  const customSelects = new Map()
 
   let map = null
   let currentUser = null
@@ -132,6 +133,98 @@
     formMessage.classList.toggle('error', isError)
   }
 
+  function closeAllCustomSelects(exceptSelectId = '') {
+    customSelects.forEach((config, selectId) => {
+      const isOpen = Boolean(exceptSelectId) && selectId === exceptSelectId && !config.select.disabled
+      config.wrap.classList.toggle('custom-select--open', isOpen)
+      config.trigger.setAttribute('aria-expanded', String(isOpen))
+      config.menu.hidden = !isOpen
+    })
+  }
+
+  function syncCustomSelectDisplay(selectId) {
+    const config = customSelects.get(selectId)
+    if (!config) return
+
+    const placeholder = String(config.select.dataset.placeholder || 'Выберите значение')
+    const opt = config.select.selectedOptions[0]
+    const hasValue = Boolean(config.select.value) && Boolean(opt)
+
+    config.trigger.textContent = hasValue ? opt.textContent : placeholder
+    config.trigger.classList.toggle('custom-select__trigger--placeholder', !hasValue)
+    config.trigger.disabled = config.select.disabled
+  }
+
+  function rebuildCustomSelectOptions(selectId) {
+    const config = customSelects.get(selectId)
+    if (!config) return
+
+    config.menu.textContent = ''
+
+    Array.from(config.select.options).forEach((option, index) => {
+      const item = document.createElement('button')
+      item.type = 'button'
+      item.className = 'custom-select__option'
+      item.textContent = option.textContent
+      item.setAttribute('role', 'option')
+      item.setAttribute('aria-selected', option.selected ? 'true' : 'false')
+
+      if (option.selected) {
+        item.classList.add('custom-select__option--selected')
+      }
+
+      item.addEventListener('click', () => {
+        if (option.disabled) return
+        config.select.selectedIndex = index
+        config.select.dispatchEvent(new Event('change', { bubbles: true }))
+        closeAllCustomSelects()
+        config.trigger.focus()
+      })
+
+      config.menu.append(item)
+    })
+
+    syncCustomSelectDisplay(selectId)
+  }
+
+  function registerCustomSelect(select) {
+    if (!select || customSelects.has(select.id)) return
+
+    const wrap = document.createElement('div')
+    wrap.className = 'custom-select'
+
+    const trigger = document.createElement('button')
+    trigger.type = 'button'
+    trigger.className = 'custom-select__trigger custom-select__trigger--placeholder'
+    trigger.setAttribute('aria-haspopup', 'listbox')
+    trigger.setAttribute('aria-expanded', 'false')
+    trigger.setAttribute('aria-controls', `${select.id}Menu`)
+
+    const menu = document.createElement('div')
+    menu.id = `${select.id}Menu`
+    menu.className = 'custom-select__menu'
+    menu.setAttribute('role', 'listbox')
+    menu.hidden = true
+
+    select.classList.add('custom-select-native')
+    select.after(wrap)
+    wrap.append(select, trigger, menu)
+
+    customSelects.set(select.id, { select, wrap, trigger, menu })
+
+    trigger.addEventListener('click', () => {
+      if (select.disabled) return
+      const isOpen = wrap.classList.contains('custom-select--open')
+      closeAllCustomSelects(isOpen ? '' : select.id)
+    })
+
+    select.addEventListener('change', () => {
+      rebuildCustomSelectOptions(select.id)
+    })
+
+    rebuildCustomSelectOptions(select.id)
+  }
+
   function formatCoords(coords) {
     return `${coords[0].toFixed(6)}, ${coords[1].toFixed(6)}`
   }
@@ -149,6 +242,15 @@
     priorityOptions.forEach(input => {
       input.checked = input.value === '1'
     })
+  }
+
+  function resetAppealForm() {
+    form.reset()
+    resetPriorityValue()
+    resetSubcategories()
+    rebuildCustomSelectOptions(categorySelect.id)
+    rebuildCustomSelectOptions(subcategorySelect.id)
+    setFormMessage('')
   }
 
   function truncateText(value, maxLength = 105) {
@@ -322,9 +424,9 @@
   function fillProfileModal(user) {
     const profile = user && typeof user === 'object' ? user : {}
     const displayName = getUserDisplayName(profile)
-    if (profileModalAvatar) profileModalAvatar.textContent = getInitials(displayName)
     if (profileFullName) profileFullName.value = displayName === 'Пользователь' ? '' : displayName
     if (profileEmail) profileEmail.value = String(profile.email || '').trim()
+    if (profilePassword) profilePassword.value = ''
     if (profileAbout) profileAbout.value = String(profile.about || '').trim()
     if (profileRole) profileRole.textContent = getUserRoleLabel(profile.role)
     if (profileCreatedAt) profileCreatedAt.textContent = formatDate(profile.created_at)
@@ -389,6 +491,7 @@
     const payload = {
       fullname: String(profileFullName?.value || '').trim(),
       email: String(profileEmail?.value || '').trim(),
+      password: String(profilePassword?.value || '').trim(),
       about: String(profileAbout?.value || '').trim(),
     }
 
@@ -551,6 +654,11 @@
   function setFormVisible(isVisible) {
     formWrap.hidden = !isVisible
     searchCard.classList.toggle('form-open', isVisible)
+    reportBtn.classList.toggle('report-btn--cancel', isVisible)
+    reportBtn.textContent = isVisible ? 'Отмена' : 'Сообщить о проблеме'
+    if (!isVisible) {
+      closeAllCustomSelects()
+    }
     if (isVisible) {
       setFormMessage('')
     }
@@ -571,15 +679,22 @@
     }
 
     resetSubcategories()
+    rebuildCustomSelectOptions(categorySelect.id)
   }
 
   function fillSubcategories(categoryId) {
     resetSubcategories()
 
-    if (!categoryId) return
+    if (!categoryId) {
+      rebuildCustomSelectOptions(subcategorySelect.id)
+      return
+    }
 
     const category = categories.find(item => String(item.id) === String(categoryId))
-    if (!category || !Array.isArray(category.subcategories)) return
+    if (!category || !Array.isArray(category.subcategories)) {
+      rebuildCustomSelectOptions(subcategorySelect.id)
+      return
+    }
 
     for (const subcategory of category.subcategories) {
       const option = document.createElement('option')
@@ -587,6 +702,8 @@
       option.textContent = subcategory.name
       subcategorySelect.append(option)
     }
+
+    rebuildCustomSelectOptions(subcategorySelect.id)
   }
 
   function clearSelectedPoint() {
@@ -596,6 +713,7 @@
 
     selectedPlacemark = null
     selectedCoords = null
+    resetAppealForm()
     updateCoordsLabel()
     setSelectionControlsVisible(false)
     setFormVisible(false)
@@ -1116,9 +1234,7 @@
         return
       }
 
-      form.reset()
-      resetPriorityValue()
-      fillSubcategories('')
+      resetAppealForm()
       clearSelectedPoint()
       await loadAppeals()
       setFormMessage('Заявка успешно отправлена')
@@ -1140,6 +1256,12 @@
   })
 
   reportBtn.addEventListener('click', () => {
+    if (!formWrap.hidden) {
+      clearSelectedPoint()
+      setFormMessage('')
+      return
+    }
+
     setFormVisible(true)
 
     if (!selectedCoords) {
@@ -1158,6 +1280,19 @@
   })
 
   form.addEventListener('submit', submitAppeal)
+  registerCustomSelect(categorySelect)
+  registerCustomSelect(subcategorySelect)
+  document.addEventListener('click', event => {
+    const target = event.target
+    if (!(target instanceof Element)) return
+    if (target.closest('.custom-select')) return
+    closeAllCustomSelects()
+  })
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+      closeAllCustomSelects()
+    }
+  })
   setupPhotoLightbox()
   appealDetailsClose.addEventListener('click', closeAppealDetailsModal)
   appealDetailsModal.addEventListener('click', event => {

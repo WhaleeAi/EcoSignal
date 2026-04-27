@@ -814,6 +814,7 @@
 
   function syncChatAvailability(appeal) {
     const enabled = canUseAppealChat(appeal)
+    const unavailableReason = 'Чат не доступен: ответственный по вашей заявке ещё не назначен'
     setChatUnavailable(!enabled)
     if (enabled) {
       setChatDisabledReason('')
@@ -821,9 +822,9 @@
       return
     }
 
-    setChatDisabledReason('Чат не доступен: ответственный по вашей заявке ещё не назначен')
+    setChatDisabledReason(unavailableReason)
     if (chatInput) {
-      chatInput.placeholder = 'Чат не доступен: ответственный по вашей заявке ещё не назначен'
+      chatInput.placeholder = 'Чат недоступен'
     }
   }
 

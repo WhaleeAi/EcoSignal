@@ -10,6 +10,21 @@
   const sidebarAvatar = document.getElementById('superSidebarAvatar')
   const sidebarName = document.getElementById('superSidebarName')
   const sidebarRole = document.getElementById('superSidebarRole')
+  const sidebarProfileButton = document.getElementById('superSidebarProfileButton')
+  const profileModal = document.getElementById('profileModal')
+  const profileModalBackdrop = document.getElementById('profileModalBackdrop')
+  const profileModalClose = document.getElementById('profileModalClose')
+  const profileModalCancel = document.getElementById('profileModalCancel')
+  const profileModalForm = document.getElementById('profileModalForm')
+  const profileModalMessage = document.getElementById('profileModalMessage')
+  const profileFullName = document.getElementById('profileFullName')
+  const profileEmailLabel = document.getElementById('profileEmailLabel')
+  const profileEmail = document.getElementById('profileEmail')
+  const profilePassword = document.getElementById('profilePassword')
+  const profileAbout = document.getElementById('profileAbout')
+  const profileRole = document.getElementById('profileRole')
+  const profileCreatedAt = document.getElementById('profileCreatedAt')
+  const profileModalSave = document.getElementById('profileModalSave')
 
   const organizationMeta = document.getElementById('organizationMeta')
   const statsContainer = document.getElementById('superStats')
@@ -21,6 +36,8 @@
     stats: null,
     admins: [],
   }
+  let profileModalCloseTimer = 0
+  const PROFILE_MODAL_CLOSE_DELAY = 95
 
   function getInitials(value) {
     const parts = String(value || '')
@@ -58,10 +75,144 @@
     return role === 'superadmin' ? 'superadmin' : 'admin'
   }
 
+  function formatProfileDate(value) {
+    if (!value) return '—'
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return String(value)
+    return new Intl.DateTimeFormat('ru-RU', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(date)
+  }
+
   function setFeedback(text, isError = false) {
     if (!listFeedback) return
     listFeedback.textContent = text
     listFeedback.classList.toggle('error', isError)
+  }
+
+  function setProfileModalMessage(text, isError = false) {
+    if (!profileModalMessage) return
+    profileModalMessage.textContent = text
+    profileModalMessage.classList.toggle('error', isError)
+  }
+
+  function fillProfileModal() {
+    const user = state.user || {}
+    const displayName = getDisplayName(user)
+    const usesOrgAdminAuth = String(user.auth_source || '') === 'org_admins'
+    if (profileFullName) {
+      profileFullName.value = displayName
+      profileFullName.readOnly = usesOrgAdminAuth
+    }
+    if (profileEmailLabel) profileEmailLabel.textContent = usesOrgAdminAuth ? 'Логин' : 'Email'
+    if (profileEmail) {
+      profileEmail.type = usesOrgAdminAuth ? 'text' : 'email'
+      profileEmail.value = String((usesOrgAdminAuth ? user.login : user.email) || user.email || user.login || '')
+    }
+    if (profilePassword) profilePassword.value = ''
+    if (profileAbout) {
+      const orgName = user.organization_name || 'не определена'
+      const orgType = user.organization_type || ''
+      profileAbout.value = orgType ? `Организация: ${orgName} (${orgType})` : `Организация: ${orgName}`
+      profileAbout.readOnly = true
+    }
+    if (profileRole) profileRole.textContent = 'superadmin'
+    if (profileCreatedAt) profileCreatedAt.textContent = formatProfileDate(user.created_at)
+  }
+
+  function finalizeProfileModalClose() {
+    if (!profileModal) return
+    profileModal.hidden = true
+    setProfileModalMessage('')
+  }
+
+  function openProfileModal() {
+    if (!profileModal) return
+    if (profileModalCloseTimer) {
+      window.clearTimeout(profileModalCloseTimer)
+      profileModalCloseTimer = 0
+    }
+    fillProfileModal()
+    setProfileModalMessage('')
+    profileModal.hidden = false
+    document.body.style.overflow = 'hidden'
+    window.requestAnimationFrame(() => {
+      profileModal.classList.add('profile-modal--open')
+    })
+  }
+
+  function closeProfileModal() {
+    if (!profileModal) return
+    profileModal.classList.remove('profile-modal--open')
+    document.body.style.overflow = ''
+    if (profileModalCloseTimer) {
+      window.clearTimeout(profileModalCloseTimer)
+    }
+    profileModalCloseTimer = window.setTimeout(() => {
+      finalizeProfileModalClose()
+      profileModalCloseTimer = 0
+    }, PROFILE_MODAL_CLOSE_DELAY)
+  }
+
+  function setupProfileModal() {
+    if (!profileModal) return
+    sidebarProfileButton?.addEventListener('click', openProfileModal)
+    profileModalBackdrop?.addEventListener('click', closeProfileModal)
+    profileModalClose?.addEventListener('click', closeProfileModal)
+    profileModalCancel?.addEventListener('click', closeProfileModal)
+    profileModalForm?.addEventListener('submit', event => {
+      event.preventDefault()
+      saveProfile()
+    })
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && profileModal && !profileModal.hidden) {
+        event.preventDefault()
+        closeProfileModal()
+      }
+    })
+  }
+
+  async function saveProfile() {
+    const payload = {
+      fullname: String(profileFullName?.value || '').trim(),
+      email: String(profileEmail?.value || '').trim(),
+      login: String(profileEmail?.value || '').trim(),
+      password: String(profilePassword?.value || '').trim(),
+      about: String(profileAbout?.value || '').trim(),
+    }
+
+    setProfileModalMessage('')
+    if (profileModalSave) profileModalSave.disabled = true
+
+    try {
+      const data = await fetchJson('backend/update_profile.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+
+      state.user = data.user || state.user
+      try {
+        localStorage.setItem('user', JSON.stringify(state.user))
+      } catch (_error) {
+        // no-op
+      }
+
+      renderAll()
+      fillProfileModal()
+      setProfileModalMessage('Профиль сохранён')
+    } catch (error) {
+      if (error?.message === '__redirect_login__' || error?.message === '__redirect_admin__' || error?.message === '__redirect_non_superadmin__') {
+        return
+      }
+      setProfileModalMessage(error?.message || 'Не удалось сохранить профиль', true)
+    } finally {
+      if (profileModalSave) profileModalSave.disabled = false
+    }
   }
 
   function setSidebarExpanded(expanded) {
@@ -175,7 +326,7 @@
 
       const status = document.createElement('span')
       status.className = `super-admin__status${admin.is_active ? ' is-active' : ''}`
-      status.textContent = admin.is_active ? 'active' : 'inactive'
+      status.textContent = admin.is_active ? 'Активен' : 'Неактивен'
 
       left.append(title, status)
 
@@ -218,7 +369,9 @@
     if (!state.user) return
 
     if (organizationMeta) {
-      organizationMeta.textContent = `Организация: ${state.user.organization_name} (${state.user.organization_type})`
+      const orgName = state.user.organization_name || 'не определена'
+      const orgType = state.user.organization_type || ''
+      organizationMeta.textContent = orgType ? `Организация: ${orgName} (${orgType})` : `Организация: ${orgName}`
     }
 
     const displayName = getDisplayName(state.user)
@@ -272,7 +425,7 @@
       throw new Error('__redirect_admin__')
     }
 
-    if (user.role !== 'superadmin' || user.auth_source !== 'org_admins') {
+    if (user.role !== 'superadmin') {
       window.location.replace('map.html')
       throw new Error('__redirect_non_superadmin__')
     }
@@ -338,6 +491,7 @@
 
   async function init() {
     setupSidebar()
+    setupProfileModal()
     setupDeleteActions()
 
     try {

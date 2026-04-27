@@ -27,6 +27,24 @@ function tableExists(PDO $pdo, string $tableName): bool
     return !empty($row['table_name']);
 }
 
+function columnExists(PDO $pdo, string $tableName, string $columnName): bool
+{
+    $stmt = $pdo->prepare('
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = :table_name
+          AND column_name = :column_name
+        LIMIT 1
+    ');
+    $stmt->execute([
+        'table_name' => $tableName,
+        'column_name' => $columnName,
+    ]);
+
+    return (bool)$stmt->fetchColumn();
+}
+
 $user = requireAuth();
 $appealId = (int)($_GET['appeal_id'] ?? 0);
 
@@ -45,6 +63,8 @@ try {
     $hasOrganizations = tableExists($pdo, 'organizations');
     $hasFilials = tableExists($pdo, 'filials');
     $hasOrgAdmins = tableExists($pdo, 'org_admins');
+    $hasSubcategoriesTable = tableExists($pdo, 'subcategories');
+    $hasAppealsSubcategoryColumn = columnExists($pdo, 'appeals', 'subcategory_id');
 
     $assignmentSelectSql = "
             NULL::bigint AS assignment_id,
@@ -59,6 +79,13 @@ try {
             NULL::text AS responsible_org_admin_login
     ";
     $assignmentJoinSql = '';
+    $subcategorySelectSql = "NULL::text AS subcategory_name";
+    $subcategoryJoinSql = '';
+
+    if ($hasSubcategoriesTable && $hasAppealsSubcategoryColumn) {
+        $subcategorySelectSql = "s.name AS subcategory_name";
+        $subcategoryJoinSql = "LEFT JOIN subcategories s ON s.id = a.subcategory_id";
+    }
 
     if ($hasAppealAssignments) {
         $assignmentSelectSql = "
@@ -106,11 +133,11 @@ try {
             a.latitude,
             a.longitude,
             c.name AS category_name,
-            s.name AS subcategory_name,
+            {$subcategorySelectSql},
             {$assignmentSelectSql}
         FROM appeals a
         INNER JOIN categories c ON c.id = a.category_id
-        LEFT JOIN subcategories s ON s.id = a.subcategory_id
+        {$subcategoryJoinSql}
         {$assignmentJoinSql}
         WHERE a.id = :appeal_id
           AND a.user_id = :user_id
@@ -138,29 +165,72 @@ try {
         $markReadStmt->execute(['appeal_id' => $appealId]);
     }
 
-    $imagesStmt = $pdo->prepare("
-        SELECT
-            id,
-            content_type,
-            encode(data, 'base64') AS data_base64
-        FROM images
-        WHERE appeal_id = :appeal_id
-        ORDER BY uploaded_at ASC, id ASC
-    ");
-    $imagesStmt->execute(['appeal_id' => $appealId]);
-
     $images = [];
-    foreach ($imagesStmt->fetchAll() as $imageRow) {
-        if (count($images) >= 9) {
-            break;
+    if (tableExists($pdo, 'images')) {
+        $hasImageUrlColumn = columnExists($pdo, 'images', 'url');
+        $hasImageDataColumn = columnExists($pdo, 'images', 'data');
+        $hasImageContentTypeColumn = columnExists($pdo, 'images', 'content_type');
+
+        $imagesSql = '';
+        if ($hasImageUrlColumn) {
+            $imagesSql = "
+                SELECT
+                    id,
+                    url
+                FROM images
+                WHERE appeal_id = :appeal_id
+                ORDER BY uploaded_at ASC, id ASC
+            ";
+        } elseif ($hasImageDataColumn) {
+            $contentTypeSql = $hasImageContentTypeColumn
+                ? "content_type"
+                : "'image/jpeg'::text AS content_type";
+
+            $imagesSql = "
+                SELECT
+                    id,
+                    {$contentTypeSql},
+                    encode(data, 'base64') AS data_base64
+                FROM images
+                WHERE appeal_id = :appeal_id
+                ORDER BY uploaded_at ASC, id ASC
+            ";
         }
 
-        $contentType = (string)($imageRow['content_type'] ?: 'image/jpeg');
-        $base64 = (string)$imageRow['data_base64'];
-        $images[] = [
-            'id' => (int)$imageRow['id'],
-            'url' => 'data:' . $contentType . ';base64,' . $base64,
-        ];
+        if ($imagesSql !== '') {
+            $imagesStmt = $pdo->prepare($imagesSql);
+            $imagesStmt->execute(['appeal_id' => $appealId]);
+
+            foreach ($imagesStmt->fetchAll() as $imageRow) {
+                if (count($images) >= 9) {
+                    break;
+                }
+
+                if ($hasImageUrlColumn) {
+                    $url = (string)($imageRow['url'] ?? '');
+                    if ($url === '') {
+                        continue;
+                    }
+
+                    $images[] = [
+                        'id' => (int)$imageRow['id'],
+                        'url' => $url,
+                    ];
+                    continue;
+                }
+
+                $contentType = (string)($imageRow['content_type'] ?? 'image/jpeg');
+                $base64 = (string)($imageRow['data_base64'] ?? '');
+                if ($base64 === '') {
+                    continue;
+                }
+
+                $images[] = [
+                    'id' => (int)$imageRow['id'],
+                    'url' => 'data:' . $contentType . ';base64,' . $base64,
+                ];
+            }
+        }
     }
 
     $messages = [];

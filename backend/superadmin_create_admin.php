@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $user = requireAuth();
-if (($user['auth_source'] ?? '') !== 'org_admins' || ($user['role'] ?? '') !== 'superadmin') {
+if (($user['role'] ?? '') !== 'superadmin') {
     jsonResponse(['message' => 'Доступ только для superadmin надзорного органа'], 403);
 }
 

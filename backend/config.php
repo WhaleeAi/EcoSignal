@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 const DB_HOST = 'localhost';
 const DB_PORT = '5432';
-const DB_NAME = 'ecosignal';
+const DB_NAME = 'ecosignal3';
 const DB_USER = 'postgres';
 const DB_PASSWORD = '123456';
 
