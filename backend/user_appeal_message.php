@@ -12,6 +12,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     jsonResponse(['message' => 'Метод не поддерживается'], 405);
 }
 
+function tableExists(PDO $pdo, string $tableName): bool
+{
+    $stmt = $pdo->prepare('SELECT to_regclass(:table_name) AS table_name');
+    $stmt->execute(['table_name' => $tableName]);
+    $row = $stmt->fetch();
+
+    return !empty($row['table_name']);
+}
+
 $user = requireAuth();
 
 if (!in_array(($user['role'] ?? ''), ['citizen', 'user'], true)) {
@@ -48,6 +57,26 @@ try {
 
     if (!$appealStmt->fetch()) {
         jsonResponse(['message' => 'Заявка не найдена'], 404);
+    }
+
+    if (!tableExists($pdo, 'appeal_assignments') || !tableExists($pdo, 'appeal_chats')) {
+        jsonResponse(['message' => 'Чат не доступен: ответственный по вашей заявке ещё не назначен'], 409);
+    }
+
+    $assignmentStmt = $pdo->prepare('
+        SELECT responsible_org_admin_id
+        FROM appeal_assignments
+        WHERE appeal_id = :appeal_id
+        ORDER BY assigned_at DESC, id DESC
+        LIMIT 1
+    ');
+    $assignmentStmt->execute([
+        'appeal_id' => $appealId,
+    ]);
+    $assignment = $assignmentStmt->fetch();
+
+    if (!$assignment || empty($assignment['responsible_org_admin_id'])) {
+        jsonResponse(['message' => 'Чат не доступен: ответственный по вашей заявке ещё не назначен'], 409);
     }
 
     $insertStmt = $pdo->prepare('

@@ -75,7 +75,7 @@ function requireAuth(): array
             ];
         }
 
-        $stmt = $pdo->prepare('SELECT id, email, first_name, last_name, role, created_at FROM users WHERE id = :id');
+        $stmt = $pdo->prepare('SELECT id, email, first_name, last_name, about, role, created_at FROM users WHERE id = :id');
         $stmt->execute(['id' => $subjectId]);
         $user = $stmt->fetch();
 

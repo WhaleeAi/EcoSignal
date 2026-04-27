@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
@@ -10,8 +10,8 @@
       href="https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@300;400;500;600&family=Roboto+Slab:wght@300;400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="admin.css" />
-    <link rel="stylesheet" href="agent.css" />
+    <link rel="stylesheet" href="admin.css?v=20260426-12" />
+    <link rel="stylesheet" href="agent.css?v=20260426-5" />
   </head>
   <body class="my-appeals-page">
     <div class="admin-page">
@@ -34,9 +34,9 @@
           </div>
 
           <nav class="sidebar-nav" aria-label="Навигация">
-            <button class="sidebar-nav-item" type="button" data-href="map.html" aria-label="Главная">
+            <button class="sidebar-nav-item" type="button" data-href="map.html" aria-label="Карта">
               <img src="./icons/Home.svg" alt="" />
-              <span class="sidebar-nav-label">Главная</span>
+              <span class="sidebar-nav-label">Карта</span>
             </button>
             <button
               class="sidebar-nav-item sidebar-nav-item--active"
@@ -55,13 +55,12 @@
           </nav>
         </div>
 
-        <button class="sidebar-profile" type="button" aria-label="Профиль">
+        <button class="sidebar-profile" id="sidebarProfileButton" type="button" aria-label="Профиль">
           <span class="sidebar-avatar" id="sidebarAvatar">А</span>
           <span class="sidebar-profile-meta">
             <span class="sidebar-profile-name">Профиль</span>
             <span class="sidebar-profile-level">Пользователь</span>
           </span>
-          <img class="sidebar-profile-arrow" aria-hidden="true" src="./icons/arrow_down.svg" />
         </button>
       </aside>
 
@@ -203,6 +202,55 @@
       <p class="photo-lightbox__counter" id="photoLightboxCounter" aria-live="polite"></p>
     </div>
 
-    <script src="my_appeals.js"></script>
+    <div class="profile-modal" id="profileModal" hidden>
+      <div class="profile-modal__backdrop" id="profileModalBackdrop"></div>
+      <section class="profile-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
+        <button class="profile-modal__close" id="profileModalClose" type="button" aria-label="Закрыть">×</button>
+        <header class="profile-modal__hero">
+          <div class="profile-modal__avatar" id="profileModalAvatar">А</div>
+          <div class="profile-modal__hero-copy">
+            <h2 class="profile-modal__title" id="profileModalTitle">Профиль</h2>
+            <p class="profile-modal__subtitle">Редактирование личных данных и контактной информации.</p>
+          </div>
+        </header>
+
+        <form class="profile-modal__form" id="profileModalForm">
+          <div class="profile-modal__grid">
+            <label class="profile-modal__field profile-modal__field--wide">
+              <span>ФИО</span>
+              <input id="profileFullName" name="fullname" type="text" maxlength="201" required />
+            </label>
+            <label class="profile-modal__field profile-modal__field--wide">
+              <span>Email</span>
+              <input id="profileEmail" name="email" type="email" maxlength="255" required />
+            </label>
+            <label class="profile-modal__field profile-modal__field--wide">
+              <span>О себе</span>
+              <textarea id="profileAbout" name="about" rows="4" maxlength="1000" placeholder="Расскажите кратко о себе"></textarea>
+            </label>
+          </div>
+
+          <div class="profile-modal__meta">
+            <div class="profile-modal__meta-item">
+              <span class="profile-modal__meta-label">Роль</span>
+              <strong class="profile-modal__meta-value" id="profileRole">Пользователь</strong>
+            </div>
+            <div class="profile-modal__meta-item">
+              <span class="profile-modal__meta-label">Дата регистрации</span>
+              <strong class="profile-modal__meta-value" id="profileCreatedAt">—</strong>
+            </div>
+          </div>
+
+          <p class="profile-modal__message" id="profileModalMessage" aria-live="polite"></p>
+
+          <div class="profile-modal__actions">
+            <button class="profile-modal__btn profile-modal__btn--secondary" id="profileModalCancel" type="button">Отмена</button>
+            <button class="profile-modal__btn profile-modal__btn--primary" id="profileModalSave" type="submit">Сохранить</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <script src="my_appeals.js?v=20260426-15"></script>
   </body>
 </html>

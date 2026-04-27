@@ -18,6 +18,15 @@ function buildUserFullName(?string $firstName, ?string $lastName, ?string $email
     return $fullName !== '' ? $fullName : (string)$email;
 }
 
+function tableExists(PDO $pdo, string $tableName): bool
+{
+    $stmt = $pdo->prepare('SELECT to_regclass(:table_name) AS table_name');
+    $stmt->execute(['table_name' => $tableName]);
+    $row = $stmt->fetch();
+
+    return !empty($row['table_name']);
+}
+
 $user = requireAuth();
 $appealId = (int)($_GET['appeal_id'] ?? 0);
 
@@ -32,6 +41,58 @@ if ($appealId <= 0) {
 try {
     $pdo = getPDO();
     $userId = (int)$user['id'];
+    $hasAppealAssignments = tableExists($pdo, 'appeal_assignments');
+    $hasOrganizations = tableExists($pdo, 'organizations');
+    $hasFilials = tableExists($pdo, 'filials');
+    $hasOrgAdmins = tableExists($pdo, 'org_admins');
+
+    $assignmentSelectSql = "
+            NULL::bigint AS assignment_id,
+            NULL::timestamp AS assigned_at,
+            NULL::text AS assignment_status,
+            NULL::bigint AS organization_id,
+            NULL::bigint AS filial_id,
+            NULL::bigint AS responsible_org_admin_id,
+            NULL::text AS organization_name,
+            NULL::text AS filial_name,
+            NULL::text AS filial_region,
+            NULL::text AS responsible_org_admin_login
+    ";
+    $assignmentJoinSql = '';
+
+    if ($hasAppealAssignments) {
+        $assignmentSelectSql = "
+            aa.id AS assignment_id,
+            aa.assigned_at,
+            aa.status AS assignment_status,
+            aa.organization_id,
+            aa.filial_id,
+            aa.responsible_org_admin_id,
+            " . ($hasOrganizations ? 'o.name' : 'NULL::text') . " AS organization_name,
+            " . ($hasFilials ? 'f.name' : 'NULL::text') . " AS filial_name,
+            " . ($hasFilials ? 'f.region' : 'NULL::text') . " AS filial_region,
+            " . ($hasOrgAdmins ? 'oa.login' : 'NULL::text') . " AS responsible_org_admin_login
+        ";
+
+        $assignmentJoinSql = "
+        LEFT JOIN LATERAL (
+            SELECT
+                id,
+                assigned_at,
+                status,
+                organization_id,
+                filial_id,
+                responsible_org_admin_id
+            FROM appeal_assignments
+            WHERE appeal_id = a.id
+            ORDER BY assigned_at DESC, id DESC
+            LIMIT 1
+        ) aa ON TRUE
+        " . ($hasOrganizations ? 'LEFT JOIN organizations o ON o.id = aa.organization_id' : '') . "
+        " . ($hasFilials ? 'LEFT JOIN filials f ON f.id = aa.filial_id' : '') . "
+        " . ($hasOrgAdmins ? 'LEFT JOIN org_admins oa ON oa.id = aa.responsible_org_admin_id' : '') . "
+        ";
+    }
 
     $pdo->beginTransaction();
 
@@ -46,35 +107,11 @@ try {
             a.longitude,
             c.name AS category_name,
             s.name AS subcategory_name,
-            aa.id AS assignment_id,
-            aa.assigned_at,
-            aa.status AS assignment_status,
-            aa.organization_id,
-            aa.filial_id,
-            aa.responsible_org_admin_id,
-            o.name AS organization_name,
-            f.name AS filial_name,
-            f.region AS filial_region,
-            oa.login AS responsible_org_admin_login
+            {$assignmentSelectSql}
         FROM appeals a
         INNER JOIN categories c ON c.id = a.category_id
         LEFT JOIN subcategories s ON s.id = a.subcategory_id
-        LEFT JOIN LATERAL (
-            SELECT
-                id,
-                assigned_at,
-                status,
-                organization_id,
-                filial_id,
-                responsible_org_admin_id
-            FROM appeal_assignments
-            WHERE appeal_id = a.id
-            ORDER BY assigned_at DESC, id DESC
-            LIMIT 1
-        ) aa ON TRUE
-        LEFT JOIN organizations o ON o.id = aa.organization_id
-        LEFT JOIN filials f ON f.id = aa.filial_id
-        LEFT JOIN org_admins oa ON oa.id = aa.responsible_org_admin_id
+        {$assignmentJoinSql}
         WHERE a.id = :appeal_id
           AND a.user_id = :user_id
         LIMIT 1
@@ -90,14 +127,16 @@ try {
         jsonResponse(['message' => 'Заявка не найдена'], 404);
     }
 
-    $markReadStmt = $pdo->prepare('
-        UPDATE appeal_chats
-        SET is_read = TRUE
-        WHERE appeal_id = :appeal_id
-          AND sender_org_admin_id IS NOT NULL
-          AND is_read = FALSE
-    ');
-    $markReadStmt->execute(['appeal_id' => $appealId]);
+    if (tableExists($pdo, 'appeal_chats')) {
+        $markReadStmt = $pdo->prepare('
+            UPDATE appeal_chats
+            SET is_read = TRUE
+            WHERE appeal_id = :appeal_id
+              AND sender_org_admin_id IS NOT NULL
+              AND is_read = FALSE
+        ');
+        $markReadStmt->execute(['appeal_id' => $appealId]);
+    }
 
     $imagesStmt = $pdo->prepare("
         SELECT
@@ -124,48 +163,51 @@ try {
         ];
     }
 
-    $chatStmt = $pdo->prepare("
-        SELECT
-            ac.id,
-            ac.message,
-            ac.created_at,
-            ac.is_read,
-            ac.sender_user_id,
-            ac.sender_org_admin_id,
-            u.first_name AS user_first_name,
-            u.last_name AS user_last_name,
-            u.email AS user_email,
-            oa.login AS org_admin_login
-        FROM appeal_chats ac
-        LEFT JOIN users u ON u.id = ac.sender_user_id
-        LEFT JOIN org_admins oa ON oa.id = ac.sender_org_admin_id
-        WHERE ac.appeal_id = :appeal_id
-        ORDER BY ac.created_at ASC, ac.id ASC
-    ");
-    $chatStmt->execute(['appeal_id' => $appealId]);
+    $messages = [];
+    if (tableExists($pdo, 'appeal_chats')) {
+        $chatStmt = $pdo->prepare("
+            SELECT
+                ac.id,
+                ac.message,
+                ac.created_at,
+                ac.is_read,
+                ac.sender_user_id,
+                ac.sender_org_admin_id,
+                u.first_name AS user_first_name,
+                u.last_name AS user_last_name,
+                u.email AS user_email,
+                " . ($hasOrgAdmins ? 'oa.login' : 'NULL::text') . " AS org_admin_login
+            FROM appeal_chats ac
+            LEFT JOIN users u ON u.id = ac.sender_user_id
+            " . ($hasOrgAdmins ? 'LEFT JOIN org_admins oa ON oa.id = ac.sender_org_admin_id' : '') . "
+            WHERE ac.appeal_id = :appeal_id
+            ORDER BY ac.created_at ASC, ac.id ASC
+        ");
+        $chatStmt->execute(['appeal_id' => $appealId]);
 
-    $messages = array_map(
-        static function (array $messageRow) use ($userId): array {
-            $isUserMessage = $messageRow['sender_user_id'] !== null;
+        $messages = array_map(
+            static function (array $messageRow) use ($userId): array {
+                $isUserMessage = $messageRow['sender_user_id'] !== null;
 
-            return [
-                'id' => (int)$messageRow['id'],
-                'message' => (string)$messageRow['message'],
-                'created_at' => (string)$messageRow['created_at'],
-                'is_read' => (bool)$messageRow['is_read'],
-                'sender_type' => $isUserMessage ? 'citizen' : 'agent',
-                'sender_name' => $isUserMessage
-                    ? buildUserFullName(
-                        $messageRow['user_first_name'] ?? null,
-                        $messageRow['user_last_name'] ?? null,
-                        $messageRow['user_email'] ?? null
-                    )
-                    : (string)($messageRow['org_admin_login'] ?? 'Агент'),
-                'is_own' => $isUserMessage && (int)$messageRow['sender_user_id'] === $userId,
-            ];
-        },
-        $chatStmt->fetchAll()
-    );
+                return [
+                    'id' => (int)$messageRow['id'],
+                    'message' => (string)$messageRow['message'],
+                    'created_at' => (string)$messageRow['created_at'],
+                    'is_read' => (bool)$messageRow['is_read'],
+                    'sender_type' => $isUserMessage ? 'citizen' : 'agent',
+                    'sender_name' => $isUserMessage
+                        ? buildUserFullName(
+                            $messageRow['user_first_name'] ?? null,
+                            $messageRow['user_last_name'] ?? null,
+                            $messageRow['user_email'] ?? null
+                        )
+                        : (string)($messageRow['org_admin_login'] ?? 'Агент'),
+                    'is_own' => $isUserMessage && (int)$messageRow['sender_user_id'] === $userId,
+                ];
+            },
+            $chatStmt->fetchAll()
+        );
+    }
 
     $pdo->commit();
 
@@ -192,8 +234,8 @@ try {
                 'responsible_org_admin_login' => $row['responsible_org_admin_login'] !== null
                     ? (string)$row['responsible_org_admin_login']
                     : null,
-                'status' => (string)$row['assignment_status'],
-                'assigned_at' => (string)$row['assigned_at'],
+                'status' => $row['assignment_status'] !== null ? (string)$row['assignment_status'] : null,
+                'assigned_at' => $row['assigned_at'] !== null ? (string)$row['assigned_at'] : null,
             ] : null,
         ],
         'chat' => $messages,

@@ -1,5 +1,6 @@
 ;(() => {
   const token = localStorage.getItem('token')
+  const SIDEBAR_STORAGE_KEY = 'ecosignalSidebarExpanded'
 
   if (!token) {
     window.location.replace('login.html')
@@ -1281,6 +1282,7 @@
   }
 
   function setupSidebarActions() {
+    const sidebarBrand = document.querySelector('.sidebar-brand')
     const logout = () => {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
@@ -1288,6 +1290,11 @@
     }
 
     const navButtons = document.querySelectorAll('.sidebar-nav-item[data-href], .sidebar-nav-item[data-action]')
+    if (sidebarBrand) {
+      sidebarBrand.addEventListener('click', () => {
+        window.location.href = 'index.html'
+      })
+    }
     navButtons.forEach(button => {
       button.addEventListener('click', () => {
         const action = button.dataset.action
@@ -1307,6 +1314,22 @@
   function setupSidebarToggle() {
     if (!sidebar || !sidebarToggle) return
 
+    const getSavedSidebarExpanded = () => {
+      try {
+        return localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true'
+      } catch (_error) {
+        return false
+      }
+    }
+
+    const persistSidebarExpanded = expanded => {
+      try {
+        localStorage.setItem(SIDEBAR_STORAGE_KEY, String(expanded))
+      } catch (_error) {
+        // no-op
+      }
+    }
+
     const setSidebarExpanded = expanded => {
       sidebar.classList.toggle('sidebar--expanded', expanded)
       sidebarToggle.setAttribute('aria-expanded', String(expanded))
@@ -1314,23 +1337,19 @@
         'aria-label',
         expanded ? 'Свернуть панель' : 'Развернуть панель'
       )
+      persistSidebarExpanded(expanded)
     }
 
-    setSidebarExpanded(sidebar.classList.contains('sidebar--expanded'))
+    setSidebarExpanded(getSavedSidebarExpanded())
+    window.requestAnimationFrame(() => {
+      sidebar.classList.add('sidebar--ready')
+    })
 
     const toggleSidebar = () => {
       setSidebarExpanded(!sidebar.classList.contains('sidebar--expanded'))
     }
 
     sidebarToggle.addEventListener('click', toggleSidebar)
-    sidebar.addEventListener('click', event => {
-      const target = event.target
-      if (!(target instanceof Element)) return
-      if (target.closest('button, a, input, select, textarea, label, [role="button"]')) {
-        return
-      }
-      toggleSidebar()
-    })
   }
 
   function setupProfileBadge(user) {

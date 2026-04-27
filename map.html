@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@300;400;500;600&family=Roboto+Slab:wght@300;400&family=Roboto+Serif:wght@400&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="map.css" />
+    <link rel="stylesheet" href="map.css?v=20260426-3" />
   </head>
   <body>
     <div class="map-page">
@@ -37,7 +37,7 @@
               class="sidebar-nav-item sidebar-nav-item--active"
               type="button"
               data-href="map.html"
-              aria-label="Главная"
+              aria-label="Карта"
               aria-current="page"
             >
               <img src="./icons/Home.svg" alt="" />
@@ -64,13 +64,13 @@
           </nav>
         </div>
 
-        <button class="sidebar-profile" type="button" aria-label="Профиль">
+        <button class="sidebar-profile" id="sidebarProfileButton" type="button" aria-label="Профиль">
           <span class="sidebar-avatar" id="sidebarAvatar">U</span>
           <span class="sidebar-profile-meta">
             <span class="sidebar-profile-name">Профиль</span>
             <span class="sidebar-profile-level">Пользователь</span>
           </span>
-          <img class="sidebar-profile-arrow" aria-hidden="true" src="./icons/arrow_down.svg" />
+          <img class="sidebar-profile-arrow" src="./icons/arrow_down.svg" aria-hidden="true" />
         </button>
       </aside>
 
@@ -108,12 +108,13 @@
                 <line x1="15.5" y1="15.5" x2="20" y2="20"></line>
               </svg>
               <input id="mapSearchInput" type="text" placeholder="Ищите по проблеме/месту" />
+              <button id="mapSearchClear" class="search-clear-btn" type="button" aria-label="Очистить поиск" hidden>&times;</button>
             </label>
             <div id="appealsList" class="appeals-list" aria-live="polite"></div>
 
             <div id="appealFormWrap" class="appeal-form-wrap" hidden>
               <h2 class="appeal-form-title">Новая заявка</h2>
-              <form id="appealForm" class="appeal-form">
+              <form id="appealForm" class="appeal-form" novalidate>
                 <label class="appeal-label">
                   Категория
                   <select id="appealCategory" required>
@@ -138,16 +139,16 @@
                   ></textarea>
                 </label>
 
-                <label class="appeal-label">
-                  Приоритет (0-5)
-                  <input
-                    id="appealPriority"
-                    type="number"
-                    min="0"
-                    max="5"
-                    value="0"
-                  />
-                </label>
+                <fieldset class="appeal-priority-field">
+                  <legend>Приоритет</legend>
+                  <div class="appeal-priority-options" id="appealPriority">
+                    <label class="appeal-priority-option"><input type="radio" name="appealPriority" value="1" checked />1</label>
+                    <label class="appeal-priority-option"><input type="radio" name="appealPriority" value="2" />2</label>
+                    <label class="appeal-priority-option"><input type="radio" name="appealPriority" value="3" />3</label>
+                    <label class="appeal-priority-option"><input type="radio" name="appealPriority" value="4" />4</label>
+                    <label class="appeal-priority-option"><input type="radio" name="appealPriority" value="5" />5</label>
+                  </div>
+                </fieldset>
 
                 <label class="appeal-label">
                   Фото
@@ -182,16 +183,63 @@
         <button id="appealDetailsClose" class="appeal-details-modal__close" type="button" aria-label="Закрыть">
           ×
         </button>
-        <h2 id="appealDetailsTitle" class="appeal-details-modal__title">Заявка</h2>
+        <header class="appeal-details-modal__hero">
+          <div id="appealDetailsBadge" class="appeal-details-modal__badge">#</div>
+          <div class="appeal-details-modal__hero-copy">
+            <h2 id="appealDetailsTitle" class="appeal-details-modal__title">Заявка</h2>
+            <p class="appeal-details-modal__subtitle">Подробности обращения, его статус и приложенные фотографии.</p>
+          </div>
+        </header>
         <div class="appeal-details-modal__meta">
-          <p id="appealDetailsUser" class="appeal-details-modal__line"></p>
-          <p id="appealDetailsCategory" class="appeal-details-modal__line"></p>
-          <p id="appealDetailsStatus" class="appeal-details-modal__line"></p>
-          <p id="appealDetailsDate" class="appeal-details-modal__line"></p>
-          <p id="appealDetailsCoords" class="appeal-details-modal__line"></p>
+          <div class="appeal-details-modal__meta-item">
+            <span class="appeal-details-modal__meta-label">Пользователь</span>
+            <strong id="appealDetailsUser" class="appeal-details-modal__meta-value">—</strong>
+          </div>
+          <div class="appeal-details-modal__meta-item">
+            <span class="appeal-details-modal__meta-label">Категория</span>
+            <strong id="appealDetailsCategory" class="appeal-details-modal__meta-value">—</strong>
+          </div>
+          <div class="appeal-details-modal__meta-item">
+            <span class="appeal-details-modal__meta-label">Статус и приоритет</span>
+            <strong id="appealDetailsStatus" class="appeal-details-modal__meta-value">—</strong>
+          </div>
+          <div class="appeal-details-modal__meta-item">
+            <span class="appeal-details-modal__meta-label">Дата создания</span>
+            <strong id="appealDetailsDate" class="appeal-details-modal__meta-value">—</strong>
+          </div>
+          <div class="appeal-details-modal__meta-item appeal-details-modal__meta-item--wide">
+            <span class="appeal-details-modal__meta-label">Координаты</span>
+            <strong id="appealDetailsCoords" class="appeal-details-modal__meta-value">—</strong>
+          </div>
         </div>
-        <p id="appealDetailsDescription" class="appeal-details-modal__description"></p>
-        <div id="appealDetailsImages" class="appeal-details-modal__images"></div>
+        <section class="appeal-details-modal__section">
+          <span class="appeal-details-modal__section-label">Описание</span>
+          <p id="appealDetailsDescription" class="appeal-details-modal__description"></p>
+        </section>
+        <section class="appeal-details-modal__section">
+          <span class="appeal-details-modal__section-label">Фотографии</span>
+          <div class="appeal-details-modal__carousel-wrap" id="appealDetailsCarouselWrap">
+            <div id="appealDetailsCarousel" class="appeal-details-modal__carousel" aria-label="Фотографии заявки">
+              <div id="appealDetailsImages" class="appeal-details-modal__images"></div>
+            </div>
+            <button
+              id="appealDetailsCarouselPrev"
+              class="appeal-details-modal__carousel-arrow appeal-details-modal__carousel-arrow--prev"
+              type="button"
+              aria-label="Прокрутить фотографии влево"
+            >
+              <span class="appeal-details-modal__carousel-arrow-icon appeal-details-modal__carousel-arrow-icon--prev" aria-hidden="true"></span>
+            </button>
+            <button
+              id="appealDetailsCarouselNext"
+              class="appeal-details-modal__carousel-arrow appeal-details-modal__carousel-arrow--next"
+              type="button"
+              aria-label="Прокрутить фотографии вправо"
+            >
+              <span class="appeal-details-modal__carousel-arrow-icon appeal-details-modal__carousel-arrow-icon--next" aria-hidden="true"></span>
+            </button>
+          </div>
+        </section>
       </article>
     </div>
 
@@ -205,7 +253,56 @@
       <button class="photo-lightbox__nav photo-lightbox__nav--next" id="photoLightboxNext" type="button" aria-label="Следующее">›</button>
       <p class="photo-lightbox__counter" id="photoLightboxCounter" aria-live="polite"></p>
     </div>
+
+    <div class="profile-modal" id="profileModal" hidden>
+      <div class="profile-modal__backdrop" id="profileModalBackdrop"></div>
+      <section class="profile-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
+        <button class="profile-modal__close" id="profileModalClose" type="button" aria-label="Закрыть">×</button>
+        <header class="profile-modal__hero">
+          <div class="profile-modal__avatar" id="profileModalAvatar">А</div>
+          <div class="profile-modal__hero-copy">
+            <h2 class="profile-modal__title" id="profileModalTitle">Профиль</h2>
+            <p class="profile-modal__subtitle">Редактирование личных данных и контактной информации.</p>
+          </div>
+        </header>
+
+        <form class="profile-modal__form" id="profileModalForm">
+          <div class="profile-modal__grid">
+            <label class="profile-modal__field profile-modal__field--wide">
+              <span>ФИО</span>
+              <input id="profileFullName" name="fullname" type="text" maxlength="201" required />
+            </label>
+            <label class="profile-modal__field profile-modal__field--wide">
+              <span>Email</span>
+              <input id="profileEmail" name="email" type="email" maxlength="255" required />
+            </label>
+            <label class="profile-modal__field profile-modal__field--wide">
+              <span>О себе</span>
+              <textarea id="profileAbout" name="about" rows="4" maxlength="1000" placeholder="Расскажите кратко о себе"></textarea>
+            </label>
+          </div>
+
+          <div class="profile-modal__meta">
+            <div class="profile-modal__meta-item">
+              <span class="profile-modal__meta-label">Роль</span>
+              <strong class="profile-modal__meta-value" id="profileRole">Пользователь</strong>
+            </div>
+            <div class="profile-modal__meta-item">
+              <span class="profile-modal__meta-label">Дата регистрации</span>
+              <strong class="profile-modal__meta-value" id="profileCreatedAt">—</strong>
+            </div>
+          </div>
+
+          <p class="profile-modal__message" id="profileModalMessage" aria-live="polite"></p>
+
+          <div class="profile-modal__actions">
+            <button class="profile-modal__btn profile-modal__btn--secondary" id="profileModalCancel" type="button">Отмена</button>
+            <button class="profile-modal__btn profile-modal__btn--primary" id="profileModalSave" type="submit">Сохранить</button>
+          </div>
+        </form>
+      </section>
+    </div>
     <script src="https://api-maps.yandex.ru/2.1/?apikey=c4b88e0d-3370-4eee-b2cd-7bb4ad66c4af&lang=ru_RU"></script>
-    <script src="map.js"></script>
+    <script src="map.js?v=20260426-4"></script>
   </body>
 </html>

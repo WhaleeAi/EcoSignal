@@ -32,29 +32,54 @@ try {
     $userStmt->execute(['email' => $email]);
     $appUser = $userStmt->fetch();
 
-    $orgStmt = $pdo->prepare('
-        SELECT
-            oa.id,
-            oa.organization_id,
-            oa.filial_id,
-            oa.login,
-            oa.password_hash,
-            oa.role,
-            oa.is_active,
-            oa.created_at,
-            oa.last_login_at,
-            o.name AS organization_name,
-            o.org_type,
-            f.name AS filial_name,
-            f.region AS filial_region
-        FROM org_admins oa
-        INNER JOIN organizations o ON o.id = oa.organization_id
-        LEFT JOIN filials f ON f.id = oa.filial_id
-        WHERE oa.login = :login
-        LIMIT 1
-    ');
-    $orgStmt->execute(['login' => $email]);
-    $orgAdmin = $orgStmt->fetch();
+    $orgAdmin = null;
+    $hasOrgAdmins = (bool)$pdo->query("SELECT to_regclass('public.org_admins') IS NOT NULL")->fetchColumn();
+    $hasOrganizations = (bool)$pdo->query("SELECT to_regclass('public.organizations') IS NOT NULL")->fetchColumn();
+    $hasFilials = (bool)$pdo->query("SELECT to_regclass('public.filials') IS NOT NULL")->fetchColumn();
+
+    if ($hasOrgAdmins && $hasOrganizations) {
+        $orgSql = '
+            SELECT
+                oa.id,
+                oa.organization_id,
+                oa.filial_id,
+                oa.login,
+                oa.password_hash,
+                oa.role,
+                oa.is_active,
+                oa.created_at,
+                oa.last_login_at,
+                o.name AS organization_name,
+                o.org_type,';
+
+        if ($hasFilials) {
+            $orgSql .= '
+                f.name AS filial_name,
+                f.region AS filial_region';
+        } else {
+            $orgSql .= '
+                NULL::varchar AS filial_name,
+                NULL::varchar AS filial_region';
+        }
+
+        $orgSql .= '
+            FROM org_admins oa
+            INNER JOIN organizations o ON o.id = oa.organization_id';
+
+        if ($hasFilials) {
+            $orgSql .= '
+            LEFT JOIN filials f ON f.id = oa.filial_id';
+        }
+
+        $orgSql .= '
+            WHERE oa.login = :login
+            LIMIT 1
+        ';
+
+        $orgStmt = $pdo->prepare($orgSql);
+        $orgStmt->execute(['login' => $email]);
+        $orgAdmin = $orgStmt->fetch();
+    }
 
     if ($appUser && password_verify($password, (string)$appUser['password_hash'])) {
         $token = createJwtToken($appUser, 'users');

@@ -1,5 +1,6 @@
-;(() => {
+﻿;(() => {
   const token = localStorage.getItem('token')
+  const SIDEBAR_STORAGE_KEY = 'ecosignalSidebarExpanded'
 
   if (!token) {
     window.location.replace('login.html')
@@ -9,9 +10,11 @@
   const statsGrid = document.getElementById('statsGrid')
   const appealsGrid = document.getElementById('appealsGrid')
   const appealsSection = document.getElementById('appealsSection')
+  const workspace = document.querySelector('.admin-workspace')
   const sidebar = document.getElementById('sidebar')
   const sidebarToggle = document.getElementById('sidebarToggle')
   const sidebarAvatar = document.getElementById('sidebarAvatar')
+  const sidebarProfileButton = document.getElementById('sidebarProfileButton')
   const sidebarProfileName = document.querySelector('.sidebar-profile-name')
   const sidebarProfileLevel = document.querySelector('.sidebar-profile-level')
 
@@ -49,6 +52,19 @@
   const photoLightboxImg = document.getElementById('photoLightboxImg')
   const photoLightboxCounter = document.getElementById('photoLightboxCounter')
   const photoLightboxStage = document.querySelector('.photo-lightbox__stage')
+  const profileModal = document.getElementById('profileModal')
+  const profileModalBackdrop = document.getElementById('profileModalBackdrop')
+  const profileModalClose = document.getElementById('profileModalClose')
+  const profileModalCancel = document.getElementById('profileModalCancel')
+  const profileModalForm = document.getElementById('profileModalForm')
+  const profileModalAvatar = document.getElementById('profileModalAvatar')
+  const profileModalMessage = document.getElementById('profileModalMessage')
+  const profileFullName = document.getElementById('profileFullName')
+  const profileEmail = document.getElementById('profileEmail')
+  const profileAbout = document.getElementById('profileAbout')
+  const profileRole = document.getElementById('profileRole')
+  const profileCreatedAt = document.getElementById('profileCreatedAt')
+  const profileModalSave = document.getElementById('profileModalSave')
 
   const modalMessage = document.getElementById('appealModalMessage')
   const chatDrawer = document.getElementById('appealChat')
@@ -58,8 +74,13 @@
   const chatComposer = document.getElementById('appealChatComposer')
   const chatInput = document.getElementById('appealChatInput')
   const chatSend = document.getElementById('appealChatSend')
+  const chatState = {
+    busy: false,
+    unavailable: false,
+  }
 
   const MODAL_PHOTO_SIZE = 180
+  const LIGHTBOX_PLACEHOLDER_SIZE = 960
 
   /** Базовая ширина карточки: min(400px, 25vw); минимум колонки 330px */
   const APPEAL_CARD_MIN_PX = 330
@@ -97,7 +118,8 @@
   let currentUser = null
   let agencyDropdownOpen = false
   let lightboxTouchStartX = 0
-
+  let profileModalCloseTimer = 0
+  const PROFILE_MODAL_CLOSE_DELAY = 95
   function toDataUrl(svgMarkup) {
     return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svgMarkup)}`
   }
@@ -119,6 +141,15 @@
     return 'Пользователь'
   }
 
+  function getUserRoleLabel(role) {
+    const normalized = String(role || '').toLowerCase()
+    if (normalized === 'citizen' || normalized === 'user') return 'Пользователь'
+    if (normalized === 'agency') return 'Агент'
+    if (normalized === 'admin') return 'Администратор'
+    if (normalized === 'superadmin') return 'Superadmin'
+    return 'Пользователь'
+  }
+
   function getToneBySeed(seedValue) {
     const seed = Math.abs(Number(seedValue) || 0)
     const pair = PHOTO_PALETTE[seed % PHOTO_PALETTE.length]
@@ -135,7 +166,7 @@
     return toDataUrl(svg)
   }
 
-  function createMiniPhotoUrl(label, index, size = 44) {
+  function createMiniPhotoUrl(label, index, size = 44, radius = 8) {
     const palette = PHOTO_PALETTE[index % PHOTO_PALETTE.length]
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}">
       <defs>
@@ -144,7 +175,7 @@
           <stop offset="100%" stop-color="${palette[1]}"/>
         </linearGradient>
       </defs>
-      <rect width="${size}" height="${size}" rx="8" fill="url(#g)"/>
+      <rect width="${size}" height="${size}" rx="${radius}" fill="url(#g)"/>
       <circle cx="${Math.round(size * 0.32)}" cy="${Math.round(size * 0.34)}" r="${Math.round(size * 0.09)}" fill="rgba(20,20,19,0.18)"/>
       <path d="M${Math.round(size * 0.14)} ${Math.round(size * 0.82)}L${Math.round(size * 0.36)} ${Math.round(size * 0.55)}L${Math.round(size * 0.5)} ${Math.round(size * 0.68)}L${Math.round(size * 0.68)} ${Math.round(size * 0.45)}L${Math.round(size * 0.86)} ${Math.round(size * 0.82)}Z" fill="rgba(20,20,19,0.22)"/>
       <text x="${Math.round(size / 2)}" y="${Math.round(size * 0.92)}" text-anchor="middle" font-size="${Math.max(10, Math.round(size * 0.16))}" font-family="Roboto Flex, sans-serif" fill="rgba(20,20,19,0.45)">${label}</text>
@@ -230,7 +261,18 @@
     const urls = lightboxState.urls
     const index = lightboxState.index
     if (!photoLightboxImg || !urls.length) return
-    photoLightboxImg.src = urls[index]
+    const currentUrl = urls[index]
+    const isPlaceholder = currentUrl.startsWith('data:image/svg+xml')
+    photoLightboxStage?.classList.toggle('photo-lightbox__stage--placeholder', isPlaceholder)
+    if (photoLightboxStage) {
+      photoLightboxStage.style.backgroundImage = isPlaceholder ? `url("${currentUrl}")` : 'none'
+    }
+    photoLightboxImg.hidden = isPlaceholder
+    if (!isPlaceholder) {
+      photoLightboxImg.src = currentUrl
+    } else {
+      photoLightboxImg.removeAttribute('src')
+    }
     photoLightboxImg.alt = `Фото ${index + 1} из ${urls.length}`
     if (photoLightboxCounter) {
       photoLightboxCounter.textContent = urls.length > 1 ? `${index + 1} / ${urls.length}` : ''
@@ -255,6 +297,105 @@
     lightboxState.urls = []
     lightboxState.index = 0
     if (photoLightboxImg) photoLightboxImg.removeAttribute('src')
+    if (photoLightboxImg) photoLightboxImg.hidden = false
+    photoLightboxStage?.classList.remove('photo-lightbox__stage--placeholder')
+    if (photoLightboxStage) {
+      photoLightboxStage.style.backgroundImage = 'none'
+    }
+  }
+
+  function setProfileModalMessage(text, isError = false) {
+    if (!profileModalMessage) return
+    profileModalMessage.textContent = text
+    profileModalMessage.classList.toggle('error', isError)
+  }
+
+  function fillProfileModal(user) {
+    const profile = user && typeof user === 'object' ? user : {}
+    const displayName = getUserDisplayName(profile)
+    if (profileModalAvatar) profileModalAvatar.textContent = getInitials(displayName)
+    if (profileFullName) profileFullName.value = displayName === 'Пользователь' ? '' : displayName
+    if (profileEmail) profileEmail.value = String(profile.email || '').trim()
+    if (profileAbout) profileAbout.value = String(profile.about || '').trim()
+    if (profileRole) profileRole.textContent = getUserRoleLabel(profile.role)
+    if (profileCreatedAt) profileCreatedAt.textContent = formatDate(profile.created_at)
+  }
+
+  function openProfileModal() {
+    if (!profileModal) return
+    if (profileModalCloseTimer) {
+      window.clearTimeout(profileModalCloseTimer)
+      profileModalCloseTimer = 0
+    }
+    fillProfileModal(currentUser)
+    setProfileModalMessage('')
+    profileModal.hidden = false
+    document.body.style.overflow = 'hidden'
+    window.requestAnimationFrame(() => {
+      profileModal.classList.add('profile-modal--open')
+      profileFullName?.focus()
+    })
+  }
+
+  function closeProfileModal() {
+    if (!profileModal) return
+    profileModal.classList.remove('profile-modal--open')
+    document.body.style.overflow = ''
+    if (profileModalCloseTimer) {
+      window.clearTimeout(profileModalCloseTimer)
+    }
+    profileModalCloseTimer = window.setTimeout(() => {
+      finalizeProfileModalClose()
+      profileModalCloseTimer = 0
+    }, PROFILE_MODAL_CLOSE_DELAY)
+  }
+
+  function finalizeProfileModalClose() {
+    if (!profileModal) return
+    if (!profileModal.classList.contains('profile-modal--open')) {
+      profileModal.hidden = true
+      setProfileModalMessage('')
+    }
+  }
+
+  async function saveProfile() {
+    const payload = {
+      fullname: String(profileFullName?.value || '').trim(),
+      email: String(profileEmail?.value || '').trim(),
+      about: String(profileAbout?.value || '').trim(),
+    }
+
+    setProfileModalMessage('')
+    if (profileModalSave) profileModalSave.disabled = true
+
+    try {
+      const response = await fetch('backend/update_profile.php', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(data.message || 'Не удалось сохранить профиль')
+      }
+
+      currentUser = data?.user || currentUser
+      try {
+        localStorage.setItem('user', JSON.stringify(currentUser))
+      } catch (_error) {
+        // no-op
+      }
+      setupProfileBadge(currentUser)
+      fillProfileModal(currentUser)
+      setProfileModalMessage(data?.message || 'Профиль обновлен')
+    } catch (error) {
+      setProfileModalMessage(error?.message || 'Не удалось сохранить профиль', true)
+    } finally {
+      if (profileModalSave) profileModalSave.disabled = false
+    }
   }
 
   function lightboxStep(delta) {
@@ -306,6 +447,17 @@
         event.preventDefault()
         lightboxStep(1)
       }
+    })
+  }
+
+  function setupProfileModal() {
+    sidebarProfileButton?.addEventListener('click', openProfileModal)
+    profileModalBackdrop?.addEventListener('click', closeProfileModal)
+    profileModalClose?.addEventListener('click', closeProfileModal)
+    profileModalCancel?.addEventListener('click', closeProfileModal)
+    profileModalForm?.addEventListener('submit', event => {
+      event.preventDefault()
+      saveProfile()
     })
   }
 
@@ -386,6 +538,9 @@
     }
 
     const cardPhotoUrls = inputImages.map((photo, index) => photo.url || createMiniPhotoUrl(photo.label || index + 1, index))
+    const cardLightboxUrls = inputImages.map((photo, index) => {
+      return photo.url || createMiniPhotoUrl(photo.label || index + 1, index, LIGHTBOX_PLACEHOLDER_SIZE, 36)
+    })
 
     inputImages.forEach((photo, index) => {
       const image = document.createElement('img')
@@ -396,7 +551,7 @@
       image.src = cardPhotoUrls[index]
       image.addEventListener('click', event => {
         event.stopPropagation()
-        openPhotoLightbox(cardPhotoUrls, index)
+        openPhotoLightbox(cardLightboxUrls, index)
       })
       photosRow.append(image)
     })
@@ -522,6 +677,17 @@
     }).format(date)
   }
 
+  function formatDate(value) {
+    if (!value) return '—'
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return String(value)
+    return new Intl.DateTimeFormat('ru-RU', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    }).format(date)
+  }
+
   function renderChat(messages) {
     if (!chatList || !chatEmpty) return
 
@@ -560,11 +726,59 @@
     })
   }
 
+  function updateChatComposerState() {
+    if (chatInput) chatInput.disabled = chatState.busy || chatState.unavailable
+    if (chatSend) {
+      chatSend.disabled = chatState.busy
+      chatSend.classList.toggle('agent-chat__send--inactive', chatState.unavailable)
+      chatSend.setAttribute('aria-disabled', String(chatState.busy || chatState.unavailable))
+    }
+    if (chatComposer) {
+      chatComposer.classList.toggle('agent-chat__composer--disabled', chatState.unavailable)
+    }
+  }
+
+  function setChatComposerDisabled(disabled) {
+    chatState.busy = disabled
+    updateChatComposerState()
+  }
+
+  function setChatUnavailable(disabled) {
+    chatState.unavailable = disabled
+    updateChatComposerState()
+  }
+
+  function setChatDisabledReason(reason = '') {
+    if (chatComposer) {
+      if (reason) {
+        chatComposer.dataset.disabledReason = reason
+      } else {
+        delete chatComposer.dataset.disabledReason
+      }
+    }
+    if (!chatSend) return
+    if (reason) {
+      chatSend.dataset.disabledReason = reason
+      chatSend.title = reason
+      return
+    }
+    delete chatSend.dataset.disabledReason
+    chatSend.removeAttribute('title')
+  }
+
+  function canUseAppealChat(appeal) {
+    return Boolean(appeal?.assignment?.responsible_org_admin_id || appeal?.assignment?.responsible_org_admin_login)
+  }
+
   function setPanelsOpen(open) {
+    workspace?.classList.toggle('admin-workspace--agent-panels-open', open)
     modal?.classList.toggle('appeal-drawer--open', open)
     chatDrawer?.classList.toggle('agent-chat-drawer--open', open)
     modal?.setAttribute('aria-hidden', String(!open))
     chatDrawer?.setAttribute('aria-hidden', String(!open))
+    layoutAppealsGrid()
+    window.requestAnimationFrame(() => layoutAppealsGrid())
+    window.setTimeout(() => layoutAppealsGrid(), 320)
   }
 
   function setAssignmentInfo(appeal) {
@@ -595,6 +809,21 @@
       modalAssignmentNote.textContent = assignment.assigned_at
         ? `Назначена: ${formatDateTime(assignment.assigned_at)}.`
         : ''
+    }
+  }
+
+  function syncChatAvailability(appeal) {
+    const enabled = canUseAppealChat(appeal)
+    setChatUnavailable(!enabled)
+    if (enabled) {
+      setChatDisabledReason('')
+      if (chatInput) chatInput.placeholder = 'Введите сообщение'
+      return
+    }
+
+    setChatDisabledReason('Чат не доступен: ответственный по вашей заявке ещё не назначен')
+    if (chatInput) {
+      chatInput.placeholder = 'Чат не доступен: ответственный по вашей заявке ещё не назначен'
     }
   }
 
@@ -630,6 +859,10 @@
   }
 
   function computeAppealsGridTemplateColumns(containerWidth) {
+    if (workspace?.classList.contains('admin-workspace--agent-panels-open')) {
+      return 'repeat(1, minmax(0, 1fr))'
+    }
+
     const w = Math.floor(containerWidth)
     const base = appealCardBaseWidthPx()
     const tripleBase = 3 * base
@@ -747,6 +980,9 @@
       const modalPhotoUrls = modalPhotos.map((photo, index) => {
         return photo.url || createMiniPhotoUrl(photo.label || index + 1, index, MODAL_PHOTO_SIZE)
       })
+      const modalLightboxUrls = modalPhotos.map((photo, index) => {
+        return photo.url || createMiniPhotoUrl(photo.label || index + 1, index, LIGHTBOX_PLACEHOLDER_SIZE, 36)
+      })
 
       modalPhotos.forEach((photo, index) => {
         const image = document.createElement('img')
@@ -756,7 +992,7 @@
         image.loading = 'lazy'
         image.alt = `Фото заявки ${index + 1}`
         image.src = modalPhotoUrls[index]
-        image.addEventListener('click', () => openPhotoLightbox(modalPhotoUrls, index))
+        image.addEventListener('click', () => openPhotoLightbox(modalLightboxUrls, index))
         modalImages.append(image)
       })
       modalCarousel.scrollLeft = 0
@@ -817,6 +1053,8 @@
     state.currentAppealId = numericAppealId
     setPanelsOpen(true)
     setModalMessage('')
+    setChatUnavailable(true)
+    setChatDisabledReason('Чат не доступен: ответственный по вашей заявке ещё не назначен')
     setChatComposerDisabled(true)
     renderChat([])
     if (chatTitle) chatTitle.textContent = `Чат по заявке #${numericAppealId}`
@@ -846,9 +1084,12 @@
       if (chatInput) chatInput.value = ''
       resizeChatInput()
       setChatComposerDisabled(false)
+      syncChatAvailability(mergedAppeal)
     } catch (error) {
       if (requestId !== state.detailRequestId) return
       setModalMessage(error?.message || 'Не удалось загрузить заявку')
+      setChatDisabledReason('Чат не доступен: ответственный по вашей заявке ещё не назначен')
+      setChatUnavailable(true)
       setChatComposerDisabled(false)
     }
   }
@@ -862,6 +1103,9 @@
     setModalMessage('')
     renderChat([])
     if (chatInput) chatInput.value = ''
+    setChatUnavailable(false)
+    setChatComposerDisabled(false)
+    setChatDisabledReason('')
     resizeChatInput()
   }
 
@@ -872,7 +1116,7 @@
   async function sendChatMessage() {
     const appealId = state.currentAppealId
     const message = String(chatInput?.value || '').trim()
-    if (!appealId || !message) return
+    if (!appealId || !message || chatState.busy || chatState.unavailable) return
 
     setChatComposerDisabled(true)
     try {
@@ -891,6 +1135,10 @@
       }
       setModalMessage('')
     } catch (error) {
+      if (String(error?.message || '').toLowerCase().includes('ответственный')) {
+        setChatUnavailable(true)
+        setChatDisabledReason(error.message)
+      }
       setModalMessage(error?.message || 'Не удалось отправить сообщение')
     } finally {
       if (state.currentAppealId === appealId) {
@@ -917,6 +1165,10 @@
     document.addEventListener('keydown', event => {
       if (event.key !== 'Escape') return
       if (photoLightbox && !photoLightbox.hidden) return
+      if (profileModal && !profileModal.hidden) {
+        closeProfileModal()
+        return
+      }
       if (agencyDropdownOpen) {
         closeAgencyDropdown()
       }
@@ -991,6 +1243,14 @@
   }
 
   function setupSidebarActions() {
+    const sidebarBrand = document.querySelector('.sidebar-brand')
+    const resetSidebarState = () => {
+      try {
+        localStorage.setItem(SIDEBAR_STORAGE_KEY, 'false')
+      } catch (_error) {
+        // no-op
+      }
+    }
     const logout = () => {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
@@ -998,6 +1258,12 @@
     }
 
     const navButtons = document.querySelectorAll('.sidebar-nav-item[data-href], .sidebar-nav-item[data-action]')
+    if (sidebarBrand) {
+      sidebarBrand.addEventListener('click', () => {
+        resetSidebarState()
+        window.location.href = 'index.html'
+      })
+    }
     navButtons.forEach(button => {
       button.addEventListener('click', () => {
         const action = button.dataset.action
@@ -1008,6 +1274,7 @@
 
         const href = button.dataset.href
         if (href) {
+          resetSidebarState()
           window.location.href = href
         }
       })
@@ -1017,6 +1284,22 @@
   function setupSidebarToggle() {
     if (!sidebar || !sidebarToggle) return
 
+    const getSavedSidebarExpanded = () => {
+      try {
+        return localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true'
+      } catch (_error) {
+        return false
+      }
+    }
+
+    const persistSidebarExpanded = expanded => {
+      try {
+        localStorage.setItem(SIDEBAR_STORAGE_KEY, String(expanded))
+      } catch (_error) {
+        // no-op
+      }
+    }
+
     const setSidebarExpanded = expanded => {
       sidebar.classList.toggle('sidebar--expanded', expanded)
       sidebarToggle.setAttribute('aria-expanded', String(expanded))
@@ -1024,30 +1307,26 @@
         'aria-label',
         expanded ? 'Свернуть панель' : 'Развернуть панель'
       )
+      persistSidebarExpanded(expanded)
     }
 
-    setSidebarExpanded(sidebar.classList.contains('sidebar--expanded'))
+    setSidebarExpanded(getSavedSidebarExpanded())
+    window.requestAnimationFrame(() => {
+      sidebar.classList.add('sidebar--ready')
+    })
 
     const toggleSidebar = () => {
       setSidebarExpanded(!sidebar.classList.contains('sidebar--expanded'))
     }
 
     sidebarToggle.addEventListener('click', toggleSidebar)
-    sidebar.addEventListener('click', event => {
-      const target = event.target
-      if (!(target instanceof Element)) return
-      if (target.closest('button, a, input, select, textarea, label, [role="button"]')) {
-        return
-      }
-      toggleSidebar()
-    })
   }
 
   function setupProfileBadge(user) {
     const displayName = getUserDisplayName(user)
     if (sidebarAvatar) sidebarAvatar.textContent = getInitials(displayName)
     if (sidebarProfileName) sidebarProfileName.textContent = displayName
-    if (sidebarProfileLevel) sidebarProfileLevel.textContent = 'Пользователь'
+    if (sidebarProfileLevel) sidebarProfileLevel.textContent = getUserRoleLabel(user?.role)
   }
 
   async function init() {
@@ -1057,6 +1336,7 @@
     setupAgencyCustomSelect()
     setupAppealCarousel()
     setupPhotoLightbox()
+    setupProfileModal()
     setupModalHandlers()
     setupAppealCardsHandler()
     modalPriorityRadios.forEach(input => {
@@ -1069,7 +1349,10 @@
     try {
       const authUser = await ensureUser()
       const pageData = await loadMyAppealsPageData()
-      const pageUser = pageData?.user || authUser
+      const pageUser = {
+        ...(authUser || {}),
+        ...((pageData?.user && typeof pageData.user === 'object') ? pageData.user : {}),
+      }
       currentUser = pageUser
 
       setupProfileBadge(pageUser)

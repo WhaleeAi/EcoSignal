@@ -4,6 +4,10 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 const mount = document.getElementById("treeScene");
 const preview = document.getElementById("previewHack");
+const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+const largeScreenQuery = window.matchMedia("(min-width: 961px)");
+const interactiveSceneEnabled =
+  largeScreenQuery.matches && !reducedMotionQuery.matches;
 
 if (!mount) {
   throw new Error("Missing #treeScene container");
@@ -86,7 +90,11 @@ void main(){
 const scene = new THREE.Scene();
 const loader = new GLTFLoader();
 const camera = new THREE.PerspectiveCamera(35, 1, 0.001, 1000);
-const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+const renderer = new THREE.WebGLRenderer({
+  alpha: true,
+  antialias: false,
+  powerPreference: "low-power"
+});
 const controls = new OrbitControls(camera, renderer.domElement);
 const dummy = new THREE.Object3D();
 const matrix = new THREE.Matrix4();
@@ -96,6 +104,10 @@ const dlight01 = new THREE.DirectionalLight(0xcccccc, 1.8);
 const tree = { group: new THREE.Group(), deadID: [], leavesCount: 0 };
 const noiseMap = new THREE.TextureLoader().load("https://raw.githubusercontent.com/ceramicSoda/treeshader/main/assets/noise.png");
 const rayPlane = new THREE.Mesh(new THREE.PlaneGeometry(100, 100, 1, 1));
+let animationFrameId = 0;
+let heroIsVisible = true;
+let hasDocumentFocus = document.visibilityState === "visible";
+let lastLeafDropAt = 0;
 
 const leavesMat = new THREE.ShaderMaterial({
   lights: true,
@@ -120,7 +132,7 @@ mount.appendChild(renderer.domElement);
 function resize() {
   const w = Math.max(1, mount.clientWidth);
   const h = Math.max(1, mount.clientHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   renderer.setSize(w, h, false);
@@ -133,9 +145,9 @@ rayPlane.visible = false;
 camera.position.set(-7, 1, -12);
 controls.target = new THREE.Vector3(0, 2.4, 0);
 controls.maxPolarAngle = Math.PI * 0.5;
-controls.enableDamping = true;
-controls.autoRotate = true;
-controls.autoRotateSpeed = 0.35;
+controls.enableDamping = interactiveSceneEnabled;
+controls.autoRotate = interactiveSceneEnabled;
+controls.autoRotateSpeed = 0.18;
 controls.enableZoom = false;
 controls.enablePan = false;
 controls.touches = { TWO: THREE.TOUCH.ROTATE };
@@ -143,6 +155,71 @@ controls.touches = { TWO: THREE.TOUCH.ROTATE };
 scene.add(dlight01, tree.group, rayPlane);
 noiseMap.wrapS = THREE.RepeatWrapping;
 noiseMap.wrapT = THREE.RepeatWrapping;
+
+function shouldAnimate() {
+  return interactiveSceneEnabled && heroIsVisible && hasDocumentFocus;
+}
+
+function dropRandomLeaf(now) {
+  if (tree.leavesCount <= 0) {
+    return;
+  }
+
+  if (!lastLeafDropAt || now - lastLeafDropAt > 1800) {
+    tree.deadID.push(Math.floor(Math.random() * tree.leavesCount));
+    lastLeafDropAt = now;
+  }
+}
+
+function renderFrame(now = performance.now()) {
+  animationFrameId = 0;
+
+  if (!shouldAnimate()) {
+    return;
+  }
+
+  leavesMat.uniforms.uTime.value += 0.005;
+  dropRandomLeaf(now);
+
+  if (tree.leaves && tree.deadID.length) {
+    tree.deadID = tree.deadID
+      .map((i) => {
+        if (typeof i !== "number") return undefined;
+        tree.leaves.getMatrixAt(i, matrix);
+        matrix.decompose(dummy.position, dummy.quaternion, dummy.scale);
+        if (dummy.position.y > 0) {
+          dummy.position.y -= 0.03;
+          dummy.position.x += Math.random() / 7 - 0.07;
+          dummy.position.z += Math.random() / 7 - 0.07;
+          dummy.rotation.x += 0.12;
+          dummy.updateMatrix();
+          tree.leaves.setMatrixAt(i, dummy.matrix);
+          return i;
+        }
+        return undefined;
+      })
+      .filter((v) => typeof v === "number");
+    tree.leaves.instanceMatrix.needsUpdate = true;
+  }
+
+  controls.update();
+  renderer.render(scene, camera);
+  animationFrameId = window.requestAnimationFrame(renderFrame);
+}
+
+function ensureAnimationState() {
+  if (shouldAnimate()) {
+    if (!animationFrameId) {
+      animationFrameId = window.requestAnimationFrame(renderFrame);
+    }
+    return;
+  }
+
+  if (animationFrameId) {
+    window.cancelAnimationFrame(animationFrameId);
+    animationFrameId = 0;
+  }
+}
 
 loader
   .loadAsync("https://raw.githubusercontent.com/ceramicSoda/treeshader/main/assets/tree.glb")
@@ -184,6 +261,9 @@ loader
     if (preview) {
       preview.style.display = "none";
     }
+
+    renderer.render(scene, camera);
+    ensureAnimationState();
   })
   .catch(() => {
     if (preview) {
@@ -191,43 +271,11 @@ loader
     }
   });
 
-function animate() {
-  requestAnimationFrame(animate);
-  leavesMat.uniforms.uTime.value += 0.01;
-
-  if (tree.leaves && tree.deadID.length) {
-    tree.deadID = tree.deadID
-      .map((i) => {
-        if (typeof i !== "number") return undefined;
-        tree.leaves.getMatrixAt(i, matrix);
-        matrix.decompose(dummy.position, dummy.quaternion, dummy.scale);
-        if (dummy.position.y > 0) {
-          dummy.position.y -= 0.04;
-          dummy.position.x += Math.random() / 5 - 0.11;
-          dummy.position.z += Math.random() / 5 - 0.11;
-          dummy.rotation.x += 0.2;
-          dummy.updateMatrix();
-          tree.leaves.setMatrixAt(i, dummy.matrix);
-          return i;
-        }
-        return undefined;
-      })
-      .filter((v) => typeof v === "number");
-    tree.leaves.instanceMatrix.needsUpdate = true;
-  }
-
-  controls.update();
-  renderer.render(scene, camera);
-}
-
-function killRandom() {
-  if (tree.leavesCount > 0) {
-    tree.deadID.push(Math.floor(Math.random() * tree.leavesCount));
-  }
-  setTimeout(killRandom, Math.random() * 1500);
-}
-
 function pointerMove(e) {
+  if (!interactiveSceneEnabled || !heroIsVisible) {
+    return;
+  }
+
   const rect = mount.getBoundingClientRect();
   if (!rect.width || !rect.height) return;
   const x = (e.clientX - rect.left) / rect.width;
@@ -254,7 +302,23 @@ function pointerMove(e) {
 const resizeObserver = new ResizeObserver(() => resize());
 resizeObserver.observe(mount);
 window.addEventListener("resize", resize);
-mount.addEventListener("mousemove", pointerMove);
 
-killRandom();
-animate();
+if (interactiveSceneEnabled) {
+  mount.addEventListener("mousemove", pointerMove, { passive: true });
+}
+
+document.addEventListener("visibilitychange", () => {
+  hasDocumentFocus = document.visibilityState === "visible";
+  ensureAnimationState();
+});
+
+const intersectionObserver = new IntersectionObserver(
+  ([entry]) => {
+    heroIsVisible = Boolean(entry?.isIntersecting);
+    ensureAnimationState();
+  },
+  { threshold: 0.15 }
+);
+
+intersectionObserver.observe(mount);
+renderer.render(scene, camera);

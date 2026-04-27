@@ -1,5 +1,6 @@
-;(() => {
+﻿;(() => {
   const token = localStorage.getItem('token')
+  const SIDEBAR_STORAGE_KEY = 'ecosignalSidebarExpanded'
 
   if (!token) {
     window.location.replace('login.html')
@@ -10,6 +11,7 @@
   const sidebar = document.getElementById('sidebar')
   const sidebarToggle = document.getElementById('sidebarToggle')
   const sidebarAvatar = document.getElementById('sidebarAvatar')
+  const sidebarProfileButton = document.getElementById('sidebarProfileButton')
   const sidebarProfileName = document.querySelector('.sidebar-profile-name')
   const sidebarProfileLevel = document.querySelector('.sidebar-profile-level')
   const closeBtn = document.getElementById('mapCloseBtn')
@@ -17,6 +19,7 @@
   const reportBtn = document.querySelector('.report-btn')
   const searchCard = document.querySelector('.search-card')
   const searchInput = document.getElementById('mapSearchInput')
+  const searchClearBtn = document.getElementById('mapSearchClear')
   const mapTitle = document.querySelector('.map-title')
   const appealsList = document.getElementById('appealsList')
   const formWrap = document.getElementById('appealFormWrap')
@@ -24,12 +27,13 @@
   const categorySelect = document.getElementById('appealCategory')
   const subcategorySelect = document.getElementById('appealSubcategory')
   const descriptionInput = document.getElementById('appealDescription')
-  const priorityInput = document.getElementById('appealPriority')
+  const priorityOptions = Array.from(document.querySelectorAll("input[name='appealPriority']"))
   const imagesInput = document.getElementById('appealImages')
   const coordsLabel = document.getElementById('appealCoords')
   const formMessage = document.getElementById('appealFormMessage')
   const appealDetailsModal = document.getElementById('appealDetailsModal')
   const appealDetailsClose = document.getElementById('appealDetailsClose')
+  const appealDetailsBadge = document.getElementById('appealDetailsBadge')
   const appealDetailsTitle = document.getElementById('appealDetailsTitle')
   const appealDetailsUser = document.getElementById('appealDetailsUser')
   const appealDetailsCategory = document.getElementById('appealDetailsCategory')
@@ -37,6 +41,9 @@
   const appealDetailsDate = document.getElementById('appealDetailsDate')
   const appealDetailsCoords = document.getElementById('appealDetailsCoords')
   const appealDetailsDescription = document.getElementById('appealDetailsDescription')
+  const appealDetailsCarousel = document.getElementById('appealDetailsCarousel')
+  const appealDetailsCarouselPrev = document.getElementById('appealDetailsCarouselPrev')
+  const appealDetailsCarouselNext = document.getElementById('appealDetailsCarouselNext')
   const appealDetailsImages = document.getElementById('appealDetailsImages')
   const photoLightbox = document.getElementById('photoLightbox')
   const photoLightboxBackdrop = document.getElementById('photoLightboxBackdrop')
@@ -46,8 +53,24 @@
   const photoLightboxImg = document.getElementById('photoLightboxImg')
   const photoLightboxCounter = document.getElementById('photoLightboxCounter')
   const photoLightboxStage = document.querySelector('.photo-lightbox__stage')
+  const profileModal = document.getElementById('profileModal')
+  const profileModalBackdrop = document.getElementById('profileModalBackdrop')
+  const profileModalClose = document.getElementById('profileModalClose')
+  const profileModalCancel = document.getElementById('profileModalCancel')
+  const profileModalForm = document.getElementById('profileModalForm')
+  const profileModalAvatar = document.getElementById('profileModalAvatar')
+  const profileModalMessage = document.getElementById('profileModalMessage')
+  const profileFullName = document.getElementById('profileFullName')
+  const profileEmail = document.getElementById('profileEmail')
+  const profileAbout = document.getElementById('profileAbout')
+  const profileRole = document.getElementById('profileRole')
+  const profileCreatedAt = document.getElementById('profileCreatedAt')
+  const profileModalSave = document.getElementById('profileModalSave')
 
   let map = null
+  let currentUser = null
+  let profileModalCloseTimer = 0
+  const PROFILE_MODAL_CLOSE_DELAY = 95
 
   const logout = () => {
     localStorage.removeItem('token')
@@ -57,6 +80,8 @@
 
   setupSidebarActions()
   setupSidebarToggle()
+  setupProfileModal()
+  setupAppealDetailsCarousel()
 
   if (
     !closeBtn ||
@@ -71,7 +96,7 @@
     !categorySelect ||
     !subcategorySelect ||
     !descriptionInput ||
-    !priorityInput ||
+    !priorityOptions.length ||
     !imagesInput ||
     !coordsLabel ||
     !formMessage ||
@@ -115,6 +140,17 @@
     return String(value || '').trim().toLowerCase()
   }
 
+  function getSelectedPriorityValue() {
+    const selected = priorityOptions.find(input => input.checked)
+    return selected ? Number(selected.value || 0) : 0
+  }
+
+  function resetPriorityValue() {
+    priorityOptions.forEach(input => {
+      input.checked = input.value === '1'
+    })
+  }
+
   function truncateText(value, maxLength = 105) {
     const text = String(value || '').trim()
     if (text.length <= maxLength) {
@@ -145,6 +181,26 @@
     return 'Пользователь'
   }
 
+  function getUserRoleLabel(role) {
+    const normalized = String(role || '').toLowerCase()
+    if (normalized === 'citizen' || normalized === 'user') return 'Пользователь'
+    if (normalized === 'agency') return 'Агент'
+    if (normalized === 'admin') return 'Администратор'
+    if (normalized === 'superadmin') return 'Superadmin'
+    return 'Пользователь'
+  }
+
+  function formatDate(rawDate) {
+    if (!rawDate) return '—'
+    const parsed = new Date(rawDate)
+    if (Number.isNaN(parsed.getTime())) return String(rawDate)
+    return parsed.toLocaleDateString('ru-RU', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+  }
+
   function createAvatarUrl(name, seedValue) {
     const tones = ['#d3bd8a', '#97b798', '#8db5c0', '#c9aa90', '#b0a0df', '#e3a8b1']
     const seed = Math.abs(Number(seedValue) || 0)
@@ -160,7 +216,21 @@
   }
 
   function setupSidebarActions() {
+    const sidebarBrand = document.querySelector('.sidebar-brand')
     const navButtons = document.querySelectorAll('.sidebar-nav-item[data-href], .sidebar-nav-item[data-action]')
+    const resetSidebarState = () => {
+      try {
+        localStorage.setItem(SIDEBAR_STORAGE_KEY, 'false')
+      } catch (_error) {
+        // no-op
+      }
+    }
+    if (sidebarBrand) {
+      sidebarBrand.addEventListener('click', () => {
+        resetSidebarState()
+        window.location.href = 'index.html'
+      })
+    }
     navButtons.forEach(button => {
       button.addEventListener('click', () => {
         const action = button.dataset.action
@@ -171,54 +241,68 @@
 
         const href = button.dataset.href
         if (href) {
+          resetSidebarState()
           window.location.href = href
         }
       })
     })
   }
 
+  function getSavedSidebarExpanded() {
+    try {
+      return localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true'
+    } catch (_error) {
+      return false
+    }
+  }
+
+  function persistSidebarExpanded(expanded) {
+    try {
+      localStorage.setItem(SIDEBAR_STORAGE_KEY, String(expanded))
+    } catch (_error) {
+      // no-op
+    }
+  }
+
   function rerenderMapAfterLayoutShift() {
     if (!map?.container) return
 
-    const fit = () => {
+    window.requestAnimationFrame(() => {
       try {
         map.container.fitToViewport()
       } catch (_error) {
         // no-op
       }
-    }
-
-    window.requestAnimationFrame(fit)
-    window.setTimeout(fit, 180)
-    window.setTimeout(fit, 320)
+    })
   }
 
   function setSidebarExpanded(expanded) {
     if (!sidebar || !sidebarToggle || !mapPage) return
     sidebar.classList.toggle('sidebar--expanded', expanded)
-    mapPage.classList.toggle('map-page--sidebar-expanded', expanded)
+    const shouldShiftLayout = window.matchMedia('(max-width: 720px)').matches
+    mapPage.classList.toggle('map-page--sidebar-expanded', expanded && shouldShiftLayout)
     sidebarToggle.setAttribute('aria-expanded', String(expanded))
     sidebarToggle.setAttribute('aria-label', expanded ? 'Свернуть панель' : 'Развернуть панель')
-    rerenderMapAfterLayoutShift()
+    persistSidebarExpanded(expanded)
   }
 
   function setupSidebarToggle() {
     if (!sidebar || !sidebarToggle) return
 
-    setSidebarExpanded(sidebar.classList.contains('sidebar--expanded'))
+    sidebar.classList.add('sidebar--no-animate')
+    setSidebarExpanded(getSavedSidebarExpanded())
+    window.requestAnimationFrame(() => {
+      sidebar.classList.remove('sidebar--no-animate')
+      sidebar.classList.add('sidebar--ready')
+    })
 
-    const toggleSidebar = () => {
+    sidebar.addEventListener('transitionend', event => {
+      if (event.propertyName !== 'width') return
+      rerenderMapAfterLayoutShift()
+    })
+
+    sidebarToggle.addEventListener('click', () => {
       setSidebarExpanded(!sidebar.classList.contains('sidebar--expanded'))
-    }
-
-    sidebarToggle.addEventListener('click', toggleSidebar)
-    sidebar.addEventListener('click', event => {
-      const target = event.target
-      if (!(target instanceof Element)) return
-      if (target.closest('button, a, input, select, textarea, label, [role="button"]')) {
-        return
-      }
-      toggleSidebar()
     })
   }
 
@@ -226,7 +310,121 @@
     const displayName = getUserDisplayName(user)
     if (sidebarAvatar) sidebarAvatar.textContent = getInitials(displayName)
     if (sidebarProfileName) sidebarProfileName.textContent = displayName
-    if (sidebarProfileLevel) sidebarProfileLevel.textContent = 'Пользователь'
+    if (sidebarProfileLevel) sidebarProfileLevel.textContent = getUserRoleLabel(user?.role)
+  }
+
+  function setProfileModalMessage(text, isError = false) {
+    if (!profileModalMessage) return
+    profileModalMessage.textContent = text
+    profileModalMessage.classList.toggle('error', isError)
+  }
+
+  function fillProfileModal(user) {
+    const profile = user && typeof user === 'object' ? user : {}
+    const displayName = getUserDisplayName(profile)
+    if (profileModalAvatar) profileModalAvatar.textContent = getInitials(displayName)
+    if (profileFullName) profileFullName.value = displayName === 'Пользователь' ? '' : displayName
+    if (profileEmail) profileEmail.value = String(profile.email || '').trim()
+    if (profileAbout) profileAbout.value = String(profile.about || '').trim()
+    if (profileRole) profileRole.textContent = getUserRoleLabel(profile.role)
+    if (profileCreatedAt) profileCreatedAt.textContent = formatDate(profile.created_at)
+  }
+
+  function finalizeProfileModalClose() {
+    if (!profileModal) return
+    profileModal.hidden = true
+    setProfileModalMessage('')
+  }
+
+  function openProfileModal() {
+    if (!profileModal) return
+    if (profileModalCloseTimer) {
+      window.clearTimeout(profileModalCloseTimer)
+      profileModalCloseTimer = 0
+    }
+    fillProfileModal(currentUser)
+    setProfileModalMessage('')
+    profileModal.hidden = false
+    document.body.style.overflow = 'hidden'
+    window.requestAnimationFrame(() => {
+      profileModal.classList.add('profile-modal--open')
+      profileFullName?.focus()
+    })
+  }
+
+  function closeProfileModal() {
+    if (!profileModal) return
+    profileModal.classList.remove('profile-modal--open')
+    document.body.style.overflow = ''
+    if (profileModalCloseTimer) {
+      window.clearTimeout(profileModalCloseTimer)
+    }
+    profileModalCloseTimer = window.setTimeout(() => {
+      finalizeProfileModalClose()
+      profileModalCloseTimer = 0
+    }, PROFILE_MODAL_CLOSE_DELAY)
+  }
+
+  function setupProfileModal() {
+    if (!profileModal) return
+
+    sidebarProfileButton?.addEventListener('click', openProfileModal)
+    profileModalBackdrop?.addEventListener('click', closeProfileModal)
+    profileModalClose?.addEventListener('click', closeProfileModal)
+    profileModalCancel?.addEventListener('click', closeProfileModal)
+    profileModalForm?.addEventListener('submit', event => {
+      event.preventDefault()
+      saveProfile()
+    })
+
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && profileModal && !profileModal.hidden) {
+        event.preventDefault()
+        closeProfileModal()
+      }
+    })
+  }
+
+  async function saveProfile() {
+    const payload = {
+      fullname: String(profileFullName?.value || '').trim(),
+      email: String(profileEmail?.value || '').trim(),
+      about: String(profileAbout?.value || '').trim(),
+    }
+
+    setProfileModalMessage('')
+    if (profileModalSave) profileModalSave.disabled = true
+
+    try {
+      const response = await fetch('backend/update_profile.php', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(data.message || 'Не удалось сохранить профиль')
+      }
+
+      currentUser = data?.user || currentUser
+      try {
+        localStorage.setItem('user', JSON.stringify(currentUser))
+      } catch (_error) {
+        // no-op
+      }
+
+      setupProfileBadge(currentUser)
+      fillProfileModal(currentUser)
+      setProfileModalMessage(data?.message || 'Профиль обновлен')
+    } catch (error) {
+      setProfileModalMessage(error?.message || 'Не удалось сохранить профиль', true)
+    } finally {
+      if (profileModalSave) profileModalSave.disabled = false
+    }
   }
 
   function createMiniPhotoUrl(index, size = 36) {
@@ -466,32 +664,132 @@
 
   function closeAppealDetailsModal() {
     closePhotoLightbox()
+    if (appealDetailsCarousel) {
+      appealDetailsCarousel.scrollLeft = 0
+    }
     appealDetailsModal.hidden = true
     document.body.style.overflow = ''
   }
 
+  function updateAppealDetailsCarouselState() {
+    if (!appealDetailsCarousel) return
+
+    const carouselStyle = window.getComputedStyle(appealDetailsCarousel)
+    const sliderEnabled =
+      (carouselStyle.overflowX === 'auto' || carouselStyle.overflowX === 'scroll') &&
+      appealDetailsCarousel.scrollWidth - appealDetailsCarousel.clientWidth > 1
+
+    if (!sliderEnabled) {
+      if (appealDetailsCarouselPrev) {
+        appealDetailsCarouselPrev.hidden = true
+        appealDetailsCarouselPrev.disabled = true
+      }
+      if (appealDetailsCarouselNext) {
+        appealDetailsCarouselNext.hidden = true
+        appealDetailsCarouselNext.disabled = true
+      }
+      return
+    }
+
+    const maxScroll = appealDetailsCarousel.scrollWidth - appealDetailsCarousel.clientWidth
+    if (maxScroll <= 1) {
+      if (appealDetailsCarouselPrev) {
+        appealDetailsCarouselPrev.hidden = true
+        appealDetailsCarouselPrev.disabled = true
+      }
+      if (appealDetailsCarouselNext) {
+        appealDetailsCarouselNext.hidden = true
+        appealDetailsCarouselNext.disabled = true
+      }
+      return
+    }
+
+    const left = appealDetailsCarousel.scrollLeft
+    const atStart = left <= 2
+    const atEnd = left >= maxScroll - 2
+
+    if (appealDetailsCarouselPrev) {
+      appealDetailsCarouselPrev.hidden = atStart
+      appealDetailsCarouselPrev.disabled = atStart
+    }
+    if (appealDetailsCarouselNext) {
+      appealDetailsCarouselNext.hidden = atEnd
+      appealDetailsCarouselNext.disabled = atEnd
+    }
+  }
+
+  function setupAppealDetailsCarousel() {
+    if (!appealDetailsCarousel) return
+
+    const onWheel = event => {
+      if (event.ctrlKey) return
+      if (appealDetailsCarousel.scrollWidth <= appealDetailsCarousel.clientWidth) return
+
+      let x = event.deltaX
+      let y = event.deltaY
+      if (event.deltaMode === 1) {
+        const line = 16
+        x *= line
+        y *= line
+      } else if (event.deltaMode === 2) {
+        x *= appealDetailsCarousel.clientWidth
+        y *= appealDetailsCarousel.clientHeight
+      }
+
+      const delta = Math.abs(x) > Math.abs(y) ? x : y
+      if (delta === 0) return
+
+      event.preventDefault()
+      appealDetailsCarousel.scrollLeft += delta
+      updateAppealDetailsCarouselState()
+    }
+
+    appealDetailsCarousel.addEventListener('wheel', onWheel, { passive: false })
+    appealDetailsCarousel.addEventListener('scroll', updateAppealDetailsCarouselState, { passive: true })
+
+    const stepClick = () => Math.min(260, Math.max(appealDetailsCarousel.clientWidth - 80, 180))
+
+    appealDetailsCarouselPrev?.addEventListener('click', () => {
+      appealDetailsCarousel.scrollBy({ left: -stepClick(), behavior: 'smooth' })
+      window.setTimeout(updateAppealDetailsCarouselState, 400)
+    })
+
+    appealDetailsCarouselNext?.addEventListener('click', () => {
+      appealDetailsCarousel.scrollBy({ left: stepClick(), behavior: 'smooth' })
+      window.setTimeout(updateAppealDetailsCarouselState, 400)
+    })
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(() => updateAppealDetailsCarouselState())
+      ro.observe(appealDetailsCarousel)
+    }
+
+    updateAppealDetailsCarouselState()
+  }
+
   function openAppealDetailsModal(appeal) {
+    const userName = appeal.user?.name || 'Без имени'
+    const userLevel = Number(appeal.user?.level || 0)
+    const category = appeal.category || '-'
+    const subcategory = appeal.subcategory || 'Без подкатегории'
+    const priority = Number(appeal.priority || 0)
+
     appealDetailsTitle.textContent = `Заявка #${appeal.id}`
-    appealDetailsUser.textContent = `Пользователь: ${appeal.user?.name || 'Без имени'} (${Number(
-      appeal.user?.level || 0
-    )} уровень)`
-    appealDetailsCategory.textContent = `Категория: ${appeal.category || '-'} / ${
-      appeal.subcategory || 'Без подкатегории'
-    }`
-    appealDetailsStatus.textContent = `Статус: ${formatAppealStatus(appeal.status)} | Приоритет: ${Number(
-      appeal.priority || 0
-    )}`
-    appealDetailsDate.textContent = `Создана: ${formatAppealDate(appeal.created_at)}`
-    appealDetailsCoords.textContent = `Координаты: ${Number(appeal.latitude).toFixed(6)}, ${Number(
-      appeal.longitude
-    ).toFixed(6)}`
+    if (appealDetailsBadge) {
+      appealDetailsBadge.textContent = `#${appeal.id}`
+    }
+    appealDetailsUser.textContent = `${userName} (${userLevel} уровень)`
+    appealDetailsCategory.textContent = `${category} / ${subcategory}`
+    appealDetailsStatus.textContent = `${formatAppealStatus(appeal.status)} | Приоритет ${priority}`
+    appealDetailsDate.textContent = formatAppealDate(appeal.created_at)
+    appealDetailsCoords.textContent = `${Number(appeal.latitude).toFixed(6)}, ${Number(appeal.longitude).toFixed(6)}`
     appealDetailsDescription.textContent = String(appeal.description || 'Описание не указано')
 
     appealDetailsImages.textContent = ''
     const sourceImages = Array.isArray(appeal.images) ? appeal.images.slice(0, 9) : []
     const imageUrls = sourceImages.length
       ? sourceImages.map((imageData, index) => imageData.url || createMiniPhotoUrl(index, 360))
-      : [createMiniPhotoUrl(0, 360)]
+      : [createMiniPhotoUrl(0, 360), createMiniPhotoUrl(1, 360), createMiniPhotoUrl(2, 360)]
 
     imageUrls.forEach((url, index) => {
       const image = document.createElement('img')
@@ -504,6 +802,10 @@
 
     appealDetailsModal.hidden = false
     document.body.style.overflow = 'hidden'
+    if (appealDetailsCarousel) {
+      appealDetailsCarousel.scrollLeft = 0
+      window.requestAnimationFrame(() => updateAppealDetailsCarouselState())
+    }
   }
 
   function isAppealInMapBounds(appeal, bounds) {
@@ -769,7 +1071,7 @@
     const categoryId = Number(categorySelect.value)
     const subcategoryId = subcategorySelect.value ? Number(subcategorySelect.value) : null
     const description = descriptionInput.value.trim()
-    const priority = Number(priorityInput.value || 0)
+    const priority = getSelectedPriorityValue()
     const imageFiles = Array.from(imagesInput.files || [])
 
     if (!categoryId || !description) {
@@ -815,7 +1117,7 @@
       }
 
       form.reset()
-      priorityInput.value = '0'
+      resetPriorityValue()
       fillSubcategories('')
       clearSelectedPoint()
       await loadAppeals()
@@ -876,6 +1178,7 @@
   Promise.resolve()
     .then(() => ensureAuthorized())
     .then(user => {
+      currentUser = user
       setupProfileBadge(user)
       return loadCategories()
     })
@@ -919,3 +1222,4 @@
     refreshVisibleAppeals()
   })
 })()
+

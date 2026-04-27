@@ -232,10 +232,11 @@ body {
 	justify-content: center;
 	text-decoration: none;
 	font-weight: 600;
+	transition: background-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
 }
 
 .btn:hover {
-	transform: translateY(-1px);
+	transform: none;
 }
 
 /* Landing page */
@@ -244,7 +245,8 @@ body {
 }
 
 .site-header {
-	height: 70px;
+	min-height: 70px;
+	height: auto;
 	width: 100%;
 	display: flex;
 	justify-content: flex-start;
@@ -315,12 +317,19 @@ body {
 	padding: 0;
 }
 
+.btn-login:hover {
+	background: #2a2d2a;
+}
+
 .landing-main {
 	padding-top: 0;
 }
 
 .wwf-hero {
-	padding: 34px 0 28px;
+	min-height: calc(100svh - 70px);
+	padding: 26px 0 20px;
+	display: flex;
+	align-items: center;
 	background:
 		linear-gradient(180deg, rgba(245, 244, 237, 0.96), rgba(245, 244, 237, 1)),
 		url('./imgs/uuundulate\ \(1\)-cropped.svg') no-repeat center / cover;
@@ -330,7 +339,8 @@ body {
 	display: grid;
 	grid-template-columns: minmax(360px, 1.02fr) minmax(0, 0.98fr);
 	gap: 42px;
-	align-items: stretch;
+	align-items: center;
+	min-height: 100%;
 }
 
 .wwf-hero-media,
@@ -348,11 +358,11 @@ body {
 
 .wwf-hero-media {
 	border-radius: 34px;
-	padding: 20px;
+	padding: 18px;
 	display: grid;
 	grid-template-rows: auto 1fr auto;
-	gap: 16px;
-	min-height: 720px;
+	gap: 14px;
+	min-height: clamp(440px, 58svh, 640px);
 }
 
 .wwf-hero-media-top {
@@ -384,7 +394,7 @@ body {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	min-height: 540px;
+	min-height: clamp(280px, 42svh, 430px);
 	border-radius: 28px;
 	background:
 		radial-gradient(circle at 50% 38%, rgba(182, 216, 148, 0.32), transparent 34%),
@@ -407,31 +417,31 @@ body {
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
-	padding: 10px 0;
+	padding: 6px 0;
 }
 
 .wwf-hero-copy h1 {
 	margin: 0;
-	max-width: 640px;
+	max-width: 620px;
 	font-family: 'Roboto Slab', serif;
-	font-size: clamp(3rem, 4vw, 4.8rem);
-	line-height: 1.02;
+	font-size: clamp(2.3rem, 3.2vw, 3.85rem);
+	line-height: 1.06;
 }
 
 .wwf-lead {
-	margin: 22px 0 34px;
-	max-width: 620px;
-	font-size: 1.12rem;
-	line-height: 1.8;
+	margin: 18px 0 26px;
+	max-width: 580px;
+	font-size: 1.02rem;
+	line-height: 1.72;
 	color: var(--text-soft);
 }
 
 .wwf-hero-notes {
-	margin-top: 28px;
+	margin-top: 22px;
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
-	gap: 18px;
-	max-width: 720px;
+	gap: 16px;
+	max-width: 680px;
 }
 
 .wwf-hero-notes div {
@@ -515,7 +525,7 @@ body {
 }
 
 .feature-story {
-	padding: 88px 0 16px;
+	padding: 72px 0 16px;
 }
 
 .feature-story-grid {
@@ -541,7 +551,7 @@ body {
 	margin: 0;
 	border-radius: 34px;
 	padding: 18px;
-	min-height: 520px;
+	min-height: 460px;
 	overflow: hidden;
 }
 
@@ -560,47 +570,21 @@ body {
 }
 
 .feature-story-copy {
-	max-width: 580px;
+	max-width: 520px;
 }
 
 .feature-story-copy h2 {
-	margin: 0 0 14px;
+	margin: 0 0 12px;
 	font-family: 'Forum', serif;
-	font-size: clamp(2rem, 2.7vw, 3rem);
-	line-height: 1.08;
+	font-size: clamp(1.8rem, 2.2vw, 2.55rem);
+	line-height: 1.12;
 }
 
 .feature-story-copy p {
 	margin: 0;
 	color: var(--text-soft);
-	font-size: 1rem;
-	line-height: 1.76;
-}
-
-.story-list {
-	margin: 22px 0 0;
-	padding: 0;
-	list-style: none;
-	display: grid;
-	gap: 14px;
-}
-
-.story-list li {
-	padding-left: 18px;
-	position: relative;
-	color: var(--text-soft);
-	line-height: 1.72;
-}
-
-.story-list li::before {
-	content: '';
-	position: absolute;
-	left: 0;
-	top: 11px;
-	width: 8px;
-	height: 8px;
-	border-radius: 999px;
-	background: var(--green);
+	font-size: 0.98rem;
+	line-height: 1.68;
 }
 
 .workflow-band {
@@ -838,7 +822,7 @@ body {
 
 #treeScene {
 	position: relative;
-	width: min(624px, 100%);
+	width: min(100%, 540px);
 	aspect-ratio: 1 / 1;
 }
 
@@ -1410,7 +1394,7 @@ body {
 	}
 
 	.wwf-hero-media {
-		min-height: 560px;
+		min-height: clamp(420px, 52svh, 560px);
 	}
 
 	.wwf-hero-notes {
@@ -1463,6 +1447,10 @@ body {
 		--page-gutter: 32px;
 	}
 
+	.site-header {
+		padding-block: 12px;
+	}
+
 	.navbar {
 		grid-template-columns: 1fr;
 		justify-items: center;
@@ -1478,7 +1466,7 @@ body {
 	}
 
 	.wwf-hero-copy h1 {
-		font-size: clamp(2.4rem, 5.6vw, 3.7rem);
+		font-size: clamp(2.1rem, 5vw, 3.15rem);
 	}
 
 	.hero-subtitle {
@@ -1504,7 +1492,7 @@ body {
 	}
 
 	#treeScene {
-		width: min(504px, 100%);
+		width: min(100%, 460px);
 	}
 
 	.mission-band h2 {
@@ -1533,6 +1521,10 @@ body {
 		--page-gutter: 16px;
 	}
 
+	.site-header {
+		padding-block: 10px;
+	}
+
 	.nav-links {
 		gap: 22px;
 		flex-wrap: wrap;
@@ -1549,6 +1541,7 @@ body {
 	}
 
 	.wwf-hero {
+		min-height: auto;
 		padding-top: 20px;
 	}
 
@@ -1589,7 +1582,7 @@ body {
 	}
 
 	.wwf-hero-scene {
-		min-height: 320px;
+		min-height: min(58vw, 320px);
 	}
 
 	.cases-cloud span {
