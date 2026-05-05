@@ -31,24 +31,6 @@ function tableExists(PDO $pdo, string $tableName): bool
     return !empty($row['table_name']);
 }
 
-function columnExists(PDO $pdo, string $tableName, string $columnName): bool
-{
-    $stmt = $pdo->prepare('
-        SELECT 1
-        FROM information_schema.columns
-        WHERE table_schema = current_schema()
-          AND table_name = :table_name
-          AND column_name = :column_name
-        LIMIT 1
-    ');
-    $stmt->execute([
-        'table_name' => $tableName,
-        'column_name' => $columnName,
-    ]);
-
-    return (bool)$stmt->fetchColumn();
-}
-
 $admin = requireAuth();
 
 if (($admin['role'] ?? '') !== 'admin' || ($admin['auth_source'] ?? '') !== 'org_admins') {

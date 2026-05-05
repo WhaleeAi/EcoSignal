@@ -75,6 +75,11 @@ function buildOrgAdminResponse(PDO $pdo, int $adminId): array
     ];
 }
 
+function ensureOrgAdminProfileColumns(PDO $pdo): void
+{
+    $pdo->exec('ALTER TABLE org_admins ADD COLUMN IF NOT EXISTS about TEXT');
+}
+
 $user = requireAuth();
 $data = getJsonInput();
 
@@ -88,6 +93,10 @@ if ($password !== '' && mb_strlen($password) < 6) {
     jsonResponse(['message' => 'Пароль должен содержать минимум 6 символов'], 422);
 }
 
+if (mb_strlen($about) > 1000) {
+    jsonResponse(['message' => 'Поле «О себе» слишком длинное'], 422);
+}
+
 try {
     $pdo = getPDO();
 
@@ -99,9 +108,10 @@ try {
             jsonResponse(['message' => 'Укажите логин'], 422);
         }
 
+        ensureOrgAdminProfileColumns($pdo);
+
         $hasFirstName = columnExists($pdo, 'org_admins', 'first_name');
         $hasLastName = columnExists($pdo, 'org_admins', 'last_name');
-        $hasAbout = columnExists($pdo, 'org_admins', 'about');
         $hasEmail = columnExists($pdo, 'org_admins', 'email');
 
         $duplicateStmt = $pdo->prepare('
@@ -144,10 +154,8 @@ try {
             $params['email'] = $effectiveEmail;
         }
 
-        if ($hasAbout) {
-            $fields[] = 'about = :about';
-            $params['about'] = $about !== '' ? $about : null;
-        }
+        $fields[] = 'about = :about';
+        $params['about'] = $about !== '' ? $about : null;
 
         if ($password !== '') {
             $fields[] = 'password_hash = :password_hash';
@@ -184,10 +192,6 @@ try {
 
     if (mb_strlen($firstName) > 100 || mb_strlen($lastName) > 100) {
         jsonResponse(['message' => 'ФИО слишком длинное'], 422);
-    }
-
-    if (mb_strlen($about) > 1000) {
-        jsonResponse(['message' => 'Поле «О себе» слишком длинное'], 422);
     }
 
     $userId = (int)$user['id'];

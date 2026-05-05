@@ -649,7 +649,7 @@
     const usesOrgAdminAuth = String(profile.auth_source || '') === 'org_admins'
     if (profileFullName) {
       profileFullName.value = displayName === 'Агент' ? '' : displayName
-      profileFullName.readOnly = usesOrgAdminAuth
+      profileFullName.readOnly = false
     }
     if (profileEmailLabel) profileEmailLabel.textContent = usesOrgAdminAuth ? 'Логин' : 'Email'
     if (profileEmail) {
@@ -659,7 +659,7 @@
     if (profilePassword) profilePassword.value = ''
     if (profileAbout) {
       profileAbout.value = String(profile.about || '').trim()
-      profileAbout.readOnly = usesOrgAdminAuth
+      profileAbout.readOnly = false
     }
     if (profileRole) profileRole.textContent = 'Агент'
     if (profileCreatedAt) profileCreatedAt.textContent = formatDate(profile.created_at)

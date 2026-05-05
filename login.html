@@ -20,10 +20,13 @@
 					EcoSignal
 				</a>
 				<ul class="nav-links">
-					<li><a href="index.html#contacts">Контакты</a></li>
 					<li><a href="index.html#about">О проекте</a></li>
+					<li><a href="index.html#how-it-works">Как это работает</a></li>
+					<li><a href="index.html#roles">Для кого</a></li>
+					<li><a href="index.html#contacts">Контакты</a></li>
+					<li><a href="map.html">Карта</a></li>
 				</ul>
-				<div class="nav-actions">
+				<div class="nav-actions" id="navActions">
 					<a class="btn btn-login" href="register.html">Регистрация</a>
 				</div>
 			</nav>
@@ -36,17 +39,19 @@
 						<h1 class="register-title">Вход</h1>
 
 						<div class="register-card">
-							<form id="loginForm" class="register-form">
+							<form id="loginForm" class="register-form" autocomplete="off">
 								<input
 									id="email"
 									name="email"
 									type="email"
+									autocomplete="off"
 									placeholder="Введите email"
 								/>
 								<input
 									id="password"
 									name="password"
 									type="password"
+									autocomplete="new-password"
 									placeholder="Введите пароль"
 								/>
 								<button type="submit" class="submit-btn">Войти</button>
@@ -68,13 +73,62 @@
 		</main>
 
 		<script>
-			document
-				.getElementById('loginForm')
+			const loginForm = document.getElementById('loginForm')
+			const emailInput = document.getElementById('email')
+			const passwordInput = document.getElementById('password')
+			const navActions = document.getElementById('navActions')
+
+			function getDashboardUrl(user) {
+				const userRole = user?.role
+				const authSource = user?.auth_source
+
+				if (userRole === 'superadmin') return 'superadmin.html'
+				if (userRole === 'admin') {
+					return authSource === 'org_admins' ? 'agent.html' : 'admin.html'
+				}
+
+				return 'map.html'
+			}
+
+			async function syncHeaderAuthAction() {
+				const token = localStorage.getItem('token')
+				if (!navActions || !token) return
+
+				try {
+					const response = await fetch('backend/me.php', {
+						method: 'GET',
+						headers: {
+							Authorization: `Bearer ${token}`,
+						},
+					})
+
+					if (!response.ok) {
+						localStorage.removeItem('token')
+						localStorage.removeItem('user')
+						return
+					}
+
+					const data = await response.json()
+					navActions.innerHTML = `<a class="btn btn-login" href="${getDashboardUrl(data?.user)}">Личный кабинет</a>`
+				} catch (error) {
+					localStorage.removeItem('token')
+					localStorage.removeItem('user')
+				}
+			}
+
+			syncHeaderAuthAction()
+
+			window.addEventListener('pageshow', () => {
+				if (emailInput) emailInput.value = ''
+				if (passwordInput) passwordInput.value = ''
+			})
+
+			loginForm
 				.addEventListener('submit', async event => {
 					event.preventDefault()
 
-					const email = document.getElementById('email').value.trim()
-					const password = document.getElementById('password').value.trim()
+					const email = emailInput.value.trim()
+					const password = passwordInput.value.trim()
 					const messageEl = document.getElementById('message')
 
 					try {
@@ -100,14 +154,7 @@
 
 						const userRole = data?.user?.role
 						const authSource = data?.user?.auth_source
-						const nextPage =
-							userRole === 'superadmin'
-								? 'superadmin.html'
-								: userRole === 'admin'
-									? authSource === 'org_admins'
-										? 'agent.html'
-										: 'admin.html'
-									: 'map.html'
+						const nextPage = getDashboardUrl({ role: userRole, auth_source: authSource })
 						setTimeout(() => {
 							window.location.href = nextPage
 						}, 1000)

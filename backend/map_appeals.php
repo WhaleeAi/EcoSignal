@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
-require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/helpers.php';
 
 allowCors();
@@ -47,12 +46,6 @@ function columnExists(PDO $pdo, string $tableName, string $columnName): bool
     ]);
 
     return (bool)$stmt->fetchColumn();
-}
-
-$user = requireAuth();
-
-if (($user['role'] ?? '') === 'admin' || ($user['role'] ?? '') === 'superadmin') {
-    jsonResponse(['message' => 'Доступ запрещен для выбранной роли'], 403);
 }
 
 try {
@@ -113,8 +106,6 @@ try {
         }
 
         $hasImageUrlColumn = columnExists($pdo, 'images', 'url');
-        $hasImageDataColumn = columnExists($pdo, 'images', 'data');
-        $hasImageContentTypeColumn = columnExists($pdo, 'images', 'content_type');
 
         $imagesSql = '';
         if ($hasImageUrlColumn) {
@@ -123,21 +114,6 @@ try {
                     appeal_id,
                     id,
                     url
-                FROM images
-                WHERE appeal_id IN (" . implode(', ', $placeholders) . ")
-                ORDER BY appeal_id ASC, uploaded_at ASC, id ASC
-            ";
-        } elseif ($hasImageDataColumn) {
-            $contentTypeSql = $hasImageContentTypeColumn
-                ? "content_type"
-                : "'image/jpeg'::text AS content_type";
-
-            $imagesSql = "
-                SELECT
-                    appeal_id,
-                    id,
-                    {$contentTypeSql},
-                    encode(data, 'base64') AS data_base64
                 FROM images
                 WHERE appeal_id IN (" . implode(', ', $placeholders) . ")
                 ORDER BY appeal_id ASC, uploaded_at ASC, id ASC
@@ -165,15 +141,6 @@ try {
                         $existing[] = [
                             'id' => (int)$imageRow['id'],
                             'url' => $url,
-                        ];
-                    }
-                } else {
-                    $contentType = (string)($imageRow['content_type'] ?: 'image/jpeg');
-                    $base64 = (string)($imageRow['data_base64'] ?? '');
-                    if ($base64 !== '') {
-                        $existing[] = [
-                            'id' => (int)$imageRow['id'],
-                            'url' => 'data:' . $contentType . ';base64,' . $base64,
                         ];
                     }
                 }
@@ -206,7 +173,6 @@ try {
                 'id' => (int)$row['user_id'],
                 'name' => $reporterName,
                 'level' => (int)($row['score'] ?? 0),
-                'email' => (string)$row['email'],
             ],
             'images' => $imagesByAppeal[$appealId] ?? [],
         ];

@@ -2,10 +2,7 @@
   const token = localStorage.getItem('token')
   const SIDEBAR_STORAGE_KEY = 'ecosignalSidebarExpanded'
 
-  if (!token) {
-    window.location.replace('login.html')
-    return
-  }
+  const isAuthenticated = Boolean(token)
 
   const mapPage = document.querySelector('.map-page')
   const sidebar = document.getElementById('sidebar')
@@ -333,6 +330,25 @@
         window.location.href = 'index.html'
       })
     }
+
+    if (!isAuthenticated) {
+      const privateNavButton = document.querySelector('.sidebar-nav-item[data-href="my_appeals.html"]')
+      const loginButton = document.querySelector('.sidebar-nav-item[data-action="logout"]')
+
+      if (privateNavButton) {
+        privateNavButton.dataset.href = 'login.html'
+      }
+      if (loginButton) {
+        loginButton.dataset.action = ''
+        loginButton.dataset.href = 'login.html'
+        loginButton.setAttribute('aria-label', 'Войти')
+        const icon = loginButton.querySelector('img')
+        if (icon) icon.src = './icons/login.svg'
+        const label = loginButton.querySelector('.sidebar-nav-label')
+        if (label) label.textContent = 'Войти'
+      }
+    }
+
     navButtons.forEach(button => {
       button.addEventListener('click', () => {
         const action = button.dataset.action
@@ -470,7 +486,14 @@
   function setupProfileModal() {
     if (!profileModal) return
 
-    sidebarProfileButton?.addEventListener('click', openProfileModal)
+    sidebarProfileButton?.addEventListener('click', () => {
+      if (!token) {
+        window.location.href = 'login.html'
+        return
+      }
+
+      openProfileModal()
+    })
     profileModalBackdrop?.addEventListener('click', closeProfileModal)
     profileModalClose?.addEventListener('click', closeProfileModal)
     profileModalCancel?.addEventListener('click', closeProfileModal)
@@ -488,6 +511,11 @@
   }
 
   async function saveProfile() {
+    if (!token) {
+      setProfileModalMessage('Для редактирования профиля войдите в систему', true)
+      return
+    }
+
     const payload = {
       fullname: String(profileFullName?.value || '').trim(),
       email: String(profileEmail?.value || '').trim(),
@@ -1113,6 +1141,10 @@
   }
 
   async function ensureAuthorized() {
+    if (!token) {
+      return null
+    }
+
     const response = await fetch('backend/me.php', {
       method: 'GET',
       headers: {
@@ -1125,24 +1157,19 @@
     if (!response.ok) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
-      window.location.replace('login.html')
       throw new Error('Требуется авторизация')
-    }
-
-    if (data?.user?.role === 'admin') {
-      window.location.replace(data.user.auth_source === 'org_admins' ? 'agent.html' : 'admin.html')
-      throw new Error('__redirect_admin__')
-    }
-
-    if (data?.user?.role === 'superadmin') {
-      window.location.replace('superadmin.html')
-      throw new Error('__redirect_admin__')
     }
 
     return data?.user || null
   }
 
   async function loadCategories() {
+    if (!token) {
+      categories = []
+      fillCategories()
+      return
+    }
+
     const response = await fetch('backend/categories.php', {
       method: 'GET',
       headers: {
@@ -1161,11 +1188,10 @@
   }
 
   async function loadAppeals() {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
     const response = await fetch('backend/map_appeals.php', {
       method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers,
     })
 
     const data = await response.json().catch(() => ({}))
@@ -1180,6 +1206,11 @@
 
   async function submitAppeal(event) {
     event.preventDefault()
+
+    if (!token) {
+      setFormMessage('Для отправки заявки войдите в систему', true)
+      return
+    }
 
     if (!selectedCoords) {
       setFormMessage('Сначала выберите точку на карте', true)
@@ -1250,12 +1281,22 @@
   closeBtn.addEventListener('click', clearSelectedPoint)
 
   addPinBtn.addEventListener('click', () => {
+    if (!token) {
+      window.location.href = 'login.html'
+      return
+    }
+
     if (!selectedCoords) return
     setFormVisible(true)
     descriptionInput.focus()
   })
 
   reportBtn.addEventListener('click', () => {
+    if (!token) {
+      window.location.href = 'login.html'
+      return
+    }
+
     if (!formWrap.hidden) {
       clearSelectedPoint()
       setFormMessage('')
@@ -1263,11 +1304,6 @@
     }
 
     setFormVisible(true)
-
-    if (!selectedCoords) {
-      setFormMessage('Сначала выберите точку на карте', true)
-      return
-    }
 
     setFormMessage('')
     descriptionInput.focus()
@@ -1319,10 +1355,11 @@
     })
     .then(() => loadAppeals())
     .catch(error => {
-      if (error?.message === '__redirect_admin__') return
       setupProfileBadge({})
       setFormVisible(false)
-      renderAppealsError(error?.message || 'Ошибка загрузки данных')
+      return loadAppeals().catch(loadError => {
+        renderAppealsError(loadError?.message || error?.message || 'Ошибка загрузки данных')
+      })
     })
 
   if (!window.ymaps) {

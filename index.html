@@ -20,10 +20,11 @@
 					EcoSignal
 				</a>
 				<ul class="nav-links">
+					<li><a href="#about">О проекте</a></li>
 					<li><a href="#how-it-works">Как это работает</a></li>
 					<li><a href="#roles">Для кого</a></li>
 					<li><a href="#contacts">Контакты</a></li>
-					<li><a href="#about">О проекте</a></li>
+					<li><a href="map.html">Карта</a></li>
 				</ul>
 				<div class="nav-actions" id="navActions">
 					<a class="btn btn-login" href="login.html">Войти</a>
@@ -303,7 +304,19 @@
 		</script>
 		<script type="module" src="tree-hero.js"></script>
 		<script>
-			async function guardLandingPage() {
+			function getDashboardUrl(user) {
+				const userRole = user?.role
+				const authSource = user?.auth_source
+
+				if (userRole === 'superadmin') return 'superadmin.html'
+				if (userRole === 'admin') {
+					return authSource === 'org_admins' ? 'agent.html' : 'admin.html'
+				}
+
+				return 'map.html'
+			}
+
+			async function syncHeaderAuthAction() {
 				const navActions = document.getElementById('navActions')
 				const token = localStorage.getItem('token')
 
@@ -330,17 +343,7 @@
 					}
 
 					const data = await response.json()
-					const userRole = data?.user?.role
-					const authSource = data?.user?.auth_source
-					const nextPage =
-						userRole === 'superadmin'
-							? 'superadmin.html'
-							: userRole === 'admin'
-								? authSource === 'org_admins'
-									? 'agent.html'
-									: 'admin.html'
-								: 'map.html'
-					window.location.replace(nextPage)
+					navActions.innerHTML = `<a class="btn btn-login" href="${getDashboardUrl(data?.user)}">Личный кабинет</a>`
 				} catch (error) {
 					localStorage.removeItem('token')
 					localStorage.removeItem('user')
@@ -348,7 +351,7 @@
 				}
 			}
 
-			guardLandingPage()
+			syncHeaderAuthAction()
 		</script>
 	</body>
 </html>

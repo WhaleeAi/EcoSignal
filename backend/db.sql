@@ -111,6 +111,7 @@ CREATE TABLE org_admins (
     login VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     role VARCHAR(32) NOT NULL CHECK (role IN ('superadmin', 'admin')),
+    about TEXT,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     last_login_at TIMESTAMP

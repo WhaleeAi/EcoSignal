@@ -20,10 +20,13 @@
 					EcoSignal
 				</a>
 				<ul class="nav-links">
-					<li><a href="index.html#contacts">Контакты</a></li>
 					<li><a href="index.html#about">О проекте</a></li>
+					<li><a href="index.html#how-it-works">Как это работает</a></li>
+					<li><a href="index.html#roles">Для кого</a></li>
+					<li><a href="index.html#contacts">Контакты</a></li>
+					<li><a href="map.html">Карта</a></li>
 				</ul>
-				<div class="nav-actions">
+				<div class="nav-actions" id="navActions">
 					<a class="btn btn-login" href="login.html">Войти</a>
 				</div>
 			</nav>
@@ -36,7 +39,7 @@
 						<h1 class="register-title">Регистрация</h1>
 
 						<div class="register-card">
-							<form class="register-form" id="registerForm">
+							<form class="register-form" id="registerForm" autocomplete="off">
 								<input
 									id="fullname"
 									name="fullname"
@@ -51,8 +54,11 @@
 								/>
 								<input
 									id="password"
-									name="password"
+									name="new_password"
 									type="password"
+									autocomplete="new-password"
+									data-lpignore="true"
+									data-1p-ignore="true"
 									placeholder="Создайте пароль"
 								/>
 
@@ -82,13 +88,6 @@
 											data-value="agency"
 										>
 											Орган надзора
-										</button>
-										<button
-											type="button"
-											class="role-option"
-											data-value="admin"
-										>
-											Администратор
 										</button>
 									</div>
 								</div>
@@ -157,6 +156,56 @@
 				})
 			})()
 
+			function getDashboardUrl(user) {
+				const userRole = user?.role
+				const authSource = user?.auth_source
+
+				if (userRole === 'superadmin') return 'superadmin.html'
+				if (userRole === 'admin') {
+					return authSource === 'org_admins' ? 'agent.html' : 'admin.html'
+				}
+
+				return 'map.html'
+			}
+
+			async function syncHeaderAuthAction() {
+				const navActions = document.getElementById('navActions')
+				const token = localStorage.getItem('token')
+				if (!navActions || !token) return
+
+				try {
+					const response = await fetch('backend/me.php', {
+						method: 'GET',
+						headers: {
+							Authorization: `Bearer ${token}`,
+						},
+					})
+
+					if (!response.ok) {
+						localStorage.removeItem('token')
+						localStorage.removeItem('user')
+						return
+					}
+
+					const data = await response.json()
+					navActions.innerHTML = `<a class="btn btn-login" href="${getDashboardUrl(data?.user)}">Личный кабинет</a>`
+				} catch (error) {
+					localStorage.removeItem('token')
+					localStorage.removeItem('user')
+				}
+			}
+
+			syncHeaderAuthAction()
+
+			const passwordInput = document.getElementById('password')
+			const clearPasswordInput = () => {
+				if (passwordInput) passwordInput.value = ''
+			}
+
+			clearPasswordInput()
+			window.addEventListener('pageshow', clearPasswordInput)
+			window.setTimeout(clearPasswordInput, 250)
+
 			document
 				.getElementById('registerForm')
 				.addEventListener('submit', async event => {
@@ -199,12 +248,7 @@
 						localStorage.setItem('user', JSON.stringify(data.user))
 
 						const userRole = data?.user?.role
-						const nextPage =
-							userRole === 'superadmin'
-								? 'superadmin.html'
-								: userRole === 'admin'
-									? 'admin.html'
-									: 'map.html'
+						const nextPage = getDashboardUrl({ role: userRole })
 						setTimeout(() => {
 							window.location.href = nextPage
 						}, 1000)

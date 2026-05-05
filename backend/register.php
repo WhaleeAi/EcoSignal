@@ -22,7 +22,7 @@ $email = trim($data['email'] ?? '');
 $password = trim($data['password'] ?? '');
 $role = trim($data['role'] ?? 'citizen');
 
-$allowedRoles = ['citizen', 'agency', 'admin'];
+$allowedRoles = ['citizen', 'agency'];
 
 if ($fullName === '' || $email === '' || $password === '' || $role === '') {
     jsonResponse(['message' => 'Заполните все поля'], 422);
@@ -36,8 +36,8 @@ if (mb_strlen($password) < 6) {
     jsonResponse(['message' => 'Пароль должен содержать минимум 6 символов'], 422);
 }
 
-if ($role === 'superadmin') {
-    jsonResponse(['message' => 'Регистрация роли superadmin недоступна'], 403);
+if ($role === 'admin' || $role === 'superadmin') {
+    jsonResponse(['message' => 'Регистрация этой роли недоступна'], 403);
 }
 
 if (!in_array($role, $allowedRoles, true)) {

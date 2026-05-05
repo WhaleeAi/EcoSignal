@@ -79,15 +79,15 @@
             <div class="super-block__head">
               <h2>Добавить администратора</h2>
             </div>
-            <form class="super-form" id="createAdminForm">
+            <form class="super-form" id="createAdminForm" autocomplete="off">
               <label class="super-form__field">
                 <span>Логин</span>
-                <input type="text" id="createAdminLogin" required />
+                <input type="text" id="createAdminLogin" autocomplete="off" required />
               </label>
 
               <label class="super-form__field">
                 <span>Пароль</span>
-                <input type="password" id="createAdminPassword" minlength="6" required />
+                <input type="password" id="createAdminPassword" autocomplete="new-password" minlength="6" required />
               </label>
 
               <label class="super-form__field">
@@ -156,7 +156,7 @@
 
               <label class="super-form__field super-form__field--wide">
                 <span>Комментарий</span>
-                <input type="text" id="createAdminComment" />
+                <input type="text" id="createAdminComment" autocomplete="off" />
               </label>
 
               <button class="super-form__submit" type="submit">Создать администратора</button>
@@ -208,7 +208,7 @@
             </label>
             <label class="profile-modal__field profile-modal__field--wide">
               <span>О себе</span>
-              <textarea id="profileAbout" name="about" rows="4" readonly></textarea>
+              <textarea id="profileAbout" name="about" rows="4" maxlength="1000"></textarea>
             </label>
           </div>
 
@@ -226,7 +226,6 @@
           <p class="profile-modal__message" id="profileModalMessage" aria-live="polite"></p>
 
           <div class="profile-modal__actions">
-            <button class="profile-modal__btn profile-modal__btn--secondary" id="profileModalCancel" type="button">Отмена</button>
             <button class="profile-modal__btn profile-modal__btn--primary" id="profileModalSave" type="submit">Сохранить</button>
           </div>
         </form>

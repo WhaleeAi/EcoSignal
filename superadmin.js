@@ -147,10 +147,8 @@
     }
     if (profilePassword) profilePassword.value = ''
     if (profileAbout) {
-      const orgName = user.organization_name || 'не определена'
-      const orgType = user.organization_type || ''
-      profileAbout.value = orgType ? `Организация: ${orgName} (${orgType})` : `Организация: ${orgName}`
-      profileAbout.readOnly = true
+      profileAbout.value = String(user.about || '').trim()
+      profileAbout.readOnly = false
     }
     if (profileRole) profileRole.textContent = 'superadmin'
     if (profileCreatedAt) profileCreatedAt.textContent = formatProfileDate(user.created_at)
@@ -251,15 +249,19 @@
 
   function closeAllCustomSelects(exceptId = '') {
     customSelects.forEach((config, id) => {
-      const shouldOpen = id === exceptId
-      config.wrap?.classList.toggle('super-select--open', shouldOpen)
-      if (config.trigger) {
-        config.trigger.setAttribute('aria-expanded', String(shouldOpen))
-      }
-      if (config.list) {
-        config.list.hidden = !shouldOpen
-      }
+      setCustomSelectOpen(config, id === exceptId)
     })
+  }
+
+  function setCustomSelectOpen(config, isOpen) {
+    if (!config) return
+    config.wrap?.classList.toggle('super-select--open', isOpen)
+    if (config.trigger) {
+      config.trigger.setAttribute('aria-expanded', String(isOpen))
+    }
+    if (config.list) {
+      config.list.hidden = !isOpen
+    }
   }
 
   function syncCustomSelectDisplay(selectId) {
@@ -296,10 +298,18 @@
       if (option.disabled) {
         item.classList.add('is-disabled')
       } else {
-        item.addEventListener('click', () => {
+        item.addEventListener('mousedown', event => {
+          event.preventDefault()
+        })
+
+        item.addEventListener('click', event => {
+          event.preventDefault()
+          event.stopPropagation()
           config.select.selectedIndex = index
+          setCustomSelectOpen(config, false)
           config.select.dispatchEvent(new Event('change', { bubbles: true }))
           closeAllCustomSelects()
+          config.trigger?.focus()
         })
       }
 
@@ -317,11 +327,12 @@
     trigger.addEventListener('click', event => {
       event.preventDefault()
       event.stopPropagation()
-      const isOpen = !list.hidden
+      const isOpen = wrap.classList.contains('super-select--open')
       closeAllCustomSelects(isOpen ? '' : select.id)
     })
 
     wrap.addEventListener('click', event => event.stopPropagation())
+    list.addEventListener('click', event => event.stopPropagation())
 
     select.addEventListener('change', () => {
       syncCustomSelectDisplay(select.id)
@@ -452,10 +463,6 @@
       option.textContent = `${org.name} (${org.org_type})`
       createAdminOrganization.append(option)
     })
-
-    if (state.user?.organization_id) {
-      createAdminOrganization.value = String(state.user.organization_id)
-    }
 
     rebuildCustomSelectOptions(createAdminOrganization.id)
   }
