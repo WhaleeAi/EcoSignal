@@ -46,6 +46,25 @@ function normalizeUploadedImages(?array $imagesField): array
     return $normalized;
 }
 
+function detectUploadedImageType(string $tmpName, string $fallbackType): string
+{
+    if (class_exists('finfo')) {
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $detectedType = $finfo->file($tmpName);
+
+        if (is_string($detectedType) && $detectedType !== '') {
+            return $detectedType;
+        }
+    }
+
+    $imageInfo = @getimagesize($tmpName);
+    if (is_array($imageInfo) && isset($imageInfo['mime']) && is_string($imageInfo['mime'])) {
+        return $imageInfo['mime'];
+    }
+
+    return $fallbackType;
+}
+
 $user = requireAuth();
 $contentType = (string)($_SERVER['CONTENT_TYPE'] ?? '');
 $data = stripos($contentType, 'application/json') !== false ? getJsonInput() : $_POST;
@@ -170,7 +189,6 @@ try {
 
     $savedImages = [];
     if (!empty($uploadedImages)) {
-        $finfo = new finfo(FILEINFO_MIME_TYPE);
         $allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
         $imageStmt = $pdo->prepare("
             INSERT INTO images (appeal_id, data, content_type, filename, size)
@@ -200,7 +218,7 @@ try {
                 jsonResponse(['message' => 'Не удалось прочитать файл'], 422);
             }
 
-            $detectedType = (string)$finfo->file($tmpName);
+            $detectedType = detectUploadedImageType($tmpName, (string)$image['type']);
             $contentTypeValue = in_array($detectedType, $allowedTypes, true)
                 ? $detectedType
                 : (string)$image['type'];

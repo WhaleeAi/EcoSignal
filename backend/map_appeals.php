@@ -106,6 +106,8 @@ try {
         }
 
         $hasImageUrlColumn = columnExists($pdo, 'images', 'url');
+        $hasImageDataColumn = columnExists($pdo, 'images', 'data');
+        $hasImageContentTypeColumn = columnExists($pdo, 'images', 'content_type');
 
         $imagesSql = '';
         if ($hasImageUrlColumn) {
@@ -118,11 +120,22 @@ try {
                 WHERE appeal_id IN (" . implode(', ', $placeholders) . ")
                 ORDER BY appeal_id ASC, uploaded_at ASC, id ASC
             ";
+        } elseif ($hasImageDataColumn) {
+            $contentTypeSql = $hasImageContentTypeColumn
+                ? "content_type"
+                : "'image/jpeg'::text AS content_type";
+
+            $imagesSql = "
+                SELECT
+                    appeal_id,
+                    id,
+                    {$contentTypeSql}
+                FROM images
+                WHERE appeal_id IN (" . implode(', ', $placeholders) . ")
+                ORDER BY appeal_id ASC, uploaded_at ASC, id ASC
+            ";
         }
 
-        if ($imagesSql === '') {
-            $imageParams = [];
-        }
         if ($imagesSql !== '') {
             $imagesStmt = $pdo->prepare($imagesSql);
             $imagesStmt->execute($imageParams);
@@ -143,6 +156,13 @@ try {
                             'url' => $url,
                         ];
                     }
+                } else {
+                    $contentType = (string)($imageRow['content_type'] ?: 'image/jpeg');
+                    $existing[] = [
+                        'id' => (int)$imageRow['id'],
+                        'url' => 'backend/image.php?id=' . (int)$imageRow['id'],
+                        'content_type' => $contentType,
+                    ];
                 }
 
                 $imagesByAppeal[$appealId] = $existing;

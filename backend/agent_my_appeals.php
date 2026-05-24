@@ -87,8 +87,7 @@ try {
             SELECT
                 appeal_id,
                 id,
-                content_type,
-                encode(data, 'base64') AS data_base64
+                content_type
             FROM images
             WHERE appeal_id IN (" . implode(', ', $placeholders) . ")
             ORDER BY appeal_id ASC, uploaded_at ASC, id ASC
@@ -105,12 +104,10 @@ try {
                 continue;
             }
 
-            $contentType = (string)($imageRow['content_type'] ?: 'image/jpeg');
-            $base64 = (string)$imageRow['data_base64'];
-
             $existing[] = [
                 'id' => (int)$imageRow['id'],
-                'url' => 'data:' . $contentType . ';base64,' . $base64,
+                'url' => 'backend/image.php?id=' . (int)$imageRow['id'],
+                'content_type' => (string)($imageRow['content_type'] ?: 'image/jpeg'),
             ];
 
             $imagesByAppeal[$appealId] = $existing;
