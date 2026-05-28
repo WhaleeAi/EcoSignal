@@ -313,6 +313,10 @@
 				const userRole = user?.role
 				const authSource = user?.auth_source
 
+				if (userRole === 'superadmin' && authSource === 'superadmins') {
+					return 'superadmin.html'
+				}
+
 				if (userRole === 'admin') {
 					return authSource === 'org_admins' ? 'agent.html' : 'map.html'
 				}

@@ -30,8 +30,8 @@ Decision rules:
 3. Confirm the appeal only when the photos and description clearly match an environmental problem from the provided category/subcategory list.
 4. Reject the appeal when photos are absent, irrelevant, contradict the description, show no visible environmental problem, or the problem is outside the provided category/subcategory list.
 5. If confirmed, decide which supervisory organization should receive the appeal. The available organizations are only: Росприроднадзор, Минприроды РФ, Рослесхоз, Департамент природопользования.
-6. Choose exactly one organization_id and filial_id from the provided organizations/filials. The filial must belong to the chosen organization.
-7. Choose the organization and filial based on the ecological problem category/subcategory, photo evidence and description. Do not invent ids, organizations, filials, categories or statuses.
+6. Choose exactly one organization_id from the provided organizations/filials. The server will route the appeal to the active filial of that organization with the shortest distance to the appeal coordinates.
+7. You may return any provided filial_id that belongs to the chosen organization, but do not invent ids, organizations, filials, categories or statuses.
 8. Priority is an integer from 0 to 5:
    0 = no environmental problem or invalid appeal,
    1 = low local inconvenience,
@@ -81,7 +81,9 @@ function fetchAiModerationReferences(PDO $pdo): array
             f.id AS filial_id,
             f.name AS filial_name,
             f.address,
-            f.region
+            f.region,
+            f.latitude,
+            f.longitude
         FROM organizations o
         INNER JOIN filials f ON f.organization_id = o.id
         WHERE f.is_active = TRUE

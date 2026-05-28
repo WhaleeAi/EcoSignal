@@ -84,12 +84,25 @@ CREATE TABLE filials (
     organization_id BIGINT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     address TEXT NOT NULL,
+    latitude DOUBLE PRECISION NOT NULL,
+    longitude DOUBLE PRECISION NOT NULL,
     hotline_phone VARCHAR(50),
     email VARCHAR(255),
     region VARCHAR(255),
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     UNIQUE (organization_id, name)
+);
+
+CREATE TABLE superadmins (
+    id BIGSERIAL PRIMARY KEY,
+    login VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    full_name VARCHAR(255),
+    role VARCHAR(32) NOT NULL DEFAULT 'superadmin' CHECK (role = 'superadmin'),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    last_login_at TIMESTAMP
 );
 
 CREATE TABLE org_admins (
@@ -183,6 +196,8 @@ INSERT INTO filials (
     organization_id,
     name,
     address,
+    latitude,
+    longitude,
     hotline_phone,
     email,
     region,
@@ -192,6 +207,28 @@ SELECT
     o.id,
     f.name,
     f.address,
+    CASE f.email
+        WHEN 'office@rpn.local' THEN 55.7636::double precision
+        WHEN 'north@rpn.local' THEN 55.7889::double precision
+        WHEN 'office@minprirody.local' THEN 55.7636::double precision
+        WHEN 'expert@minprirody.local' THEN 55.7529::double precision
+        WHEN 'office@rosleshoz.local' THEN 55.7356::double precision
+        WHEN 'monitor@rosleshoz.local' THEN 55.6784::double precision
+        WHEN 'office@dpp.local' THEN 55.7527::double precision
+        WHEN 'south@dpp.local' THEN 55.7053::double precision
+        ELSE 55.751244::double precision
+    END,
+    CASE f.email
+        WHEN 'office@rpn.local' THEN 37.5803::double precision
+        WHEN 'north@rpn.local' THEN 37.5834::double precision
+        WHEN 'office@minprirody.local' THEN 37.5803::double precision
+        WHEN 'expert@minprirody.local' THEN 37.5890::double precision
+        WHEN 'office@rosleshoz.local' THEN 37.6265::double precision
+        WHEN 'monitor@rosleshoz.local' THEN 37.6245::double precision
+        WHEN 'office@dpp.local' THEN 37.5966::double precision
+        WHEN 'south@dpp.local' THEN 37.6551::double precision
+        ELSE 37.618423::double precision
+    END,
     f.hotline_phone,
     f.email,
     'Москва',
@@ -212,10 +249,32 @@ JOIN (
 ON CONFLICT (organization_id, name) DO UPDATE
 SET
     address = EXCLUDED.address,
+    latitude = EXCLUDED.latitude,
+    longitude = EXCLUDED.longitude,
     hotline_phone = EXCLUDED.hotline_phone,
     email = EXCLUDED.email,
     region = EXCLUDED.region,
     is_active = EXCLUDED.is_active;
+
+INSERT INTO superadmins (
+    login,
+    password_hash,
+    full_name,
+    role,
+    is_active
+)
+VALUES (
+    'superadmin@ecosignal.local',
+    crypt('SuperAdmin#2026!', gen_salt('bf', 10)),
+    'Superadmin',
+    'superadmin',
+    TRUE
+)
+ON CONFLICT (login) DO UPDATE
+SET
+    full_name = EXCLUDED.full_name,
+    role = EXCLUDED.role,
+    is_active = TRUE;
 
 INSERT INTO org_admins (
     organization_id,
@@ -295,6 +354,8 @@ WITH latest_appeals AS (
     SELECT
         a.id AS appeal_id,
         a.status,
+        a.latitude,
+        a.longitude,
         s.name AS subcategory_name,
         CASE
             WHEN s.name IN ('Незаконная вырубка', 'Пожарная опасность') THEN 'Рослесхоз'
@@ -316,7 +377,23 @@ assignment_targets AS (
     INNER JOIN organizations o ON o.name = la.organization_name
     INNER JOIN filials f ON f.organization_id = o.id AND f.is_active = TRUE
     INNER JOIN org_admins oa ON oa.filial_id = f.id AND oa.role = 'admin' AND oa.is_active = TRUE
-    ORDER BY la.appeal_id, f.id ASC, oa.id ASC
+    ORDER BY
+        la.appeal_id,
+        (
+            6371 * acos(
+                LEAST(
+                    1,
+                    GREATEST(
+                        -1,
+                        cos(radians(la.latitude)) * cos(radians(f.latitude)) *
+                        cos(radians(f.longitude) - radians(la.longitude)) +
+                        sin(radians(la.latitude)) * sin(radians(f.latitude))
+                    )
+                )
+            )
+        ) ASC,
+        f.id ASC,
+        oa.id ASC
 )
 INSERT INTO appeal_assignments (
     appeal_id,
