@@ -59,7 +59,6 @@ try {
             a.priority,
             a.latitude,
             a.longitude,
-            a.assigned_admin_id,
             aa.id AS assignment_id,
             aa.assigned_at,
             aa.status AS assignment_status,
@@ -158,20 +157,23 @@ try {
     $messages = array_map(
         static function (array $messageRow) use ($adminId): array {
             $isAgentMessage = $messageRow['sender_org_admin_id'] !== null;
+            $isUserMessage = $messageRow['sender_user_id'] !== null;
 
             return [
                 'id' => (int)$messageRow['id'],
                 'message' => (string)$messageRow['message'],
                 'created_at' => (string)$messageRow['created_at'],
                 'is_read' => (bool)$messageRow['is_read'],
-                'sender_type' => $isAgentMessage ? 'agent' : 'citizen',
-                'sender_name' => $isAgentMessage
-                    ? (string)($messageRow['org_admin_login'] ?? 'Агент')
-                    : buildFullName(
+                'sender_type' => $isAgentMessage ? 'agent' : ($isUserMessage ? 'citizen' : 'system'),
+                'sender_name' => match (true) {
+                    $isAgentMessage => (string)($messageRow['org_admin_login'] ?? 'Агент'),
+                    $isUserMessage => buildFullName(
                         $messageRow['user_first_name'] ?? null,
                         $messageRow['user_last_name'] ?? null,
                         $messageRow['user_email'] ?? null
                     ),
+                    default => 'EcoSignal AI',
+                },
                 'is_own' => $isAgentMessage && (int)$messageRow['sender_org_admin_id'] === $adminId,
             ];
         },
@@ -196,9 +198,6 @@ try {
             'priority' => (int)$row['priority'],
             'latitude' => $row['latitude'] !== null ? (float)$row['latitude'] : null,
             'longitude' => $row['longitude'] !== null ? (float)$row['longitude'] : null,
-            'assigned_admin_id' => $row['assigned_admin_id'] !== null
-                ? (int)$row['assigned_admin_id']
-                : null,
             'category' => (string)$row['category_name'],
             'subcategory' => (string)($row['subcategory_name'] ?? 'Без подкатегории'),
             'user' => [

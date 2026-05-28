@@ -82,9 +82,8 @@
 				const userRole = user?.role
 				const authSource = user?.auth_source
 
-				if (userRole === 'superadmin') return 'superadmin.html'
 				if (userRole === 'admin') {
-					return authSource === 'org_admins' ? 'agent.html' : 'admin.html'
+					return authSource === 'org_admins' ? 'agent.html' : 'map.html'
 				}
 
 				return 'map.html'

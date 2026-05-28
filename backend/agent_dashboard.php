@@ -61,7 +61,6 @@ try {
             a.priority,
             a.latitude,
             a.longitude,
-            a.assigned_admin_id,
             aa.assigned_at AS assignment_assigned_at,
             u.id AS user_id,
             u.first_name,
@@ -225,9 +224,6 @@ try {
             'created_at' => (string)$row['created_at'],
             'assigned_at' => (string)$row['assignment_assigned_at'],
             'priority' => (int)$row['priority'],
-            'assigned_admin_id' => $row['assigned_admin_id'] !== null
-                ? (int)$row['assigned_admin_id']
-                : null,
             'latitude' => $row['latitude'] !== null ? (float)$row['latitude'] : null,
             'longitude' => $row['longitude'] !== null ? (float)$row['longitude'] : null,
             'category' => (string)$row['category_name'],

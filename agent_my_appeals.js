@@ -80,6 +80,8 @@
   const APPEAL_CARD_BASE_CAP_PX = 400
   const APPEAL_CARD_BASE_VW_RATIO = 0.25
   const MODAL_PHOTO_SIZE = 180
+  let appealsGridLayoutFrame = 0
+  let appealsGridTemplate = ''
 
   const PHOTO_PALETTE = [
     ['#f4dca1', '#d3bd8a'],
@@ -97,6 +99,14 @@
     rejected: 'Отклонена',
     pending: 'Новая',
   }
+
+  Object.assign(STATUS_LABELS, {
+    confirmed: 'Принята',
+    in_progress: 'В работе',
+    resolved: 'Закрыта',
+    rejected: 'Отклонена',
+    pending: 'Ожидает',
+  })
 
   const state = {
     user: null,
@@ -273,18 +283,29 @@
 
   function layoutAppealsGrid() {
     if (!appealsGrid || !appealsSection) return
-    appealsGrid.style.gridTemplateColumns = computeAppealsGridTemplateColumns(appealsSection.clientWidth)
+    const template = computeAppealsGridTemplateColumns(appealsSection.clientWidth)
+    if (template === appealsGridTemplate) return
+    appealsGridTemplate = template
+    appealsGrid.style.gridTemplateColumns = template
+  }
+
+  function scheduleAppealsGridLayout() {
+    if (appealsGridLayoutFrame) return
+    appealsGridLayoutFrame = window.requestAnimationFrame(() => {
+      appealsGridLayoutFrame = 0
+      layoutAppealsGrid()
+    })
   }
 
   function setupAppealsGridLayout() {
     layoutAppealsGrid()
 
     if (typeof ResizeObserver !== 'undefined' && appealsSection) {
-      const observer = new ResizeObserver(() => layoutAppealsGrid())
+      const observer = new ResizeObserver(() => scheduleAppealsGridLayout())
       observer.observe(appealsSection)
     }
 
-    window.addEventListener('resize', layoutAppealsGrid)
+    window.addEventListener('resize', scheduleAppealsGridLayout)
   }
 
   function createAppealCard(appeal) {
@@ -606,13 +627,26 @@
       const item = document.createElement('article')
       item.className = 'agent-chat__message'
       if (message.is_own) item.classList.add('agent-chat__message--own')
+      if (message.sender_type === 'system') {
+        item.classList.add('agent-chat__message--system')
+        const systemText = String(message.message || '').toLowerCase()
+        if (systemText.includes('отклон')) {
+          item.classList.add('agent-chat__message--system-rejected')
+        } else if (systemText.includes('принят') || systemText.includes('направлен')) {
+          item.classList.add('agent-chat__message--system-confirmed')
+        } else {
+          item.classList.add('agent-chat__message--system-pending')
+        }
+      }
 
       const head = document.createElement('div')
       head.className = 'agent-chat__message-head'
 
       const author = document.createElement('p')
       author.className = 'agent-chat__message-author'
-      author.textContent = String(message.sender_name || (message.sender_type === 'agent' ? 'Агент' : 'Житель'))
+      author.textContent = String(
+        message.sender_name || (message.sender_type === 'system' ? 'EcoSignal AI' : message.sender_type === 'agent' ? 'Агент' : 'Житель')
+      )
 
       const time = document.createElement('p')
       time.className = 'agent-chat__message-time'
@@ -719,16 +753,6 @@
       throw new Error('__redirect_login__')
     }
 
-    if (data.user.role === 'superadmin') {
-      window.location.replace('superadmin.html')
-      throw new Error('__redirect_superadmin__')
-    }
-
-    if (data.user.role === 'admin' && data.user.auth_source !== 'org_admins') {
-      window.location.replace('admin.html')
-      throw new Error('__redirect_admin__')
-    }
-
     if (data.user.role !== 'admin' || data.user.auth_source !== 'org_admins') {
       window.location.replace('map.html')
       throw new Error('__redirect_non_agent__')
@@ -753,8 +777,8 @@
       }
 
       if (response.status === 403) {
-        window.location.replace('admin.html')
-        throw new Error('__redirect_admin__')
+        window.location.replace('map.html')
+        throw new Error('__redirect_non_agent__')
       }
 
       throw new Error(data.message || 'Не удалось загрузить обращения агента')
@@ -1106,6 +1130,17 @@
     })
   }
 
+  function isSidebarInteractiveTarget(target) {
+    return (
+      target instanceof Element &&
+      Boolean(
+        target.closest(
+          '.sidebar-nav-item, .sidebar-nav-item1, .sidebar-profile, .sidebar-brand'
+        )
+      )
+    )
+  }
+
   function setupSidebarToggle() {
     if (!sidebar || !sidebarToggle) return
 
@@ -1139,7 +1174,15 @@
 
     const toggleSidebar = () => setSidebarExpanded(!sidebar.classList.contains('sidebar--expanded'))
 
-    sidebarToggle.addEventListener('click', toggleSidebar)
+    sidebarToggle.addEventListener('click', event => {
+      event.stopPropagation()
+      toggleSidebar()
+    })
+
+    sidebar.addEventListener('click', event => {
+      if (isSidebarInteractiveTarget(event.target)) return
+      toggleSidebar()
+    })
   }
 
   function setupModalHandlers() {
@@ -1195,8 +1238,6 @@
     } catch (error) {
       if (
         error?.message === '__redirect_login__' ||
-        error?.message === '__redirect_superadmin__' ||
-        error?.message === '__redirect_admin__' ||
         error?.message === '__redirect_non_agent__'
       ) {
         return

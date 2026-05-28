@@ -39,7 +39,6 @@ try {
             a.description,
             a.created_at,
             a.priority,
-            a.assigned_admin_id,
             aa.assigned_at AS assignment_assigned_at,
             u.id AS user_id,
             u.first_name,
@@ -130,9 +129,6 @@ try {
             'created_at' => (string)$row['created_at'],
             'assigned_at' => (string)$row['assignment_assigned_at'],
             'priority' => (int)$row['priority'],
-            'assigned_admin_id' => $row['assigned_admin_id'] !== null
-                ? (int)$row['assigned_admin_id']
-                : null,
             'category' => (string)$row['category_name'],
             'subcategory' => (string)($row['subcategory_name'] ?? 'Без подкатегории'),
             'user' => [

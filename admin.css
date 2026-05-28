@@ -58,7 +58,7 @@ body {
 }
 
 .sidebar.sidebar--ready {
-  transition: width 0.16s ease;
+  transition: none;
 }
 
 .sidebar--expanded {
@@ -79,6 +79,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 4px;
   min-height: 36px;
 }
 
@@ -124,10 +125,18 @@ body {
 .sidebar-nav-item1 {
   width: 36px;
   height: 36px;
+  flex: 0 0 36px;
   border-radius: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+}
+
+.sidebar:not(.sidebar--expanded) .sidebar-nav-item1 {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 36px;
 }
 
 .sidebar-nav-item1 img,
@@ -224,8 +233,9 @@ body {
 .sidebar:not(.sidebar--expanded) .sidebar-brand-icon {
   overflow: hidden;
   white-space: nowrap;
-  max-width: 0;
+  max-width: 220px;
   opacity: 0;
+  transform: translateX(-6px);
   transition: none;
 }
 
@@ -234,7 +244,7 @@ body {
 .sidebar.sidebar--ready .sidebar-brand-name,
 .sidebar.sidebar--ready .sidebar-profile-arrow,
 .sidebar.sidebar--ready:not(.sidebar--expanded) .sidebar-brand-icon {
-  transition: max-width 0.15s ease, opacity 0.1s ease;
+  transition: opacity 0.12s ease, transform 0.12s ease;
 }
 
 .sidebar--expanded .sidebar-nav-label,
@@ -244,6 +254,7 @@ body {
 .sidebar--expanded .sidebar-brand-icon {
   max-width: 220px;
   opacity: 1;
+  transform: translateX(0);
 }
 
 .sidebar--expanded .sidebar-nav-item {
@@ -777,7 +788,7 @@ body {
 .appeal-drawer {
   flex-shrink: 0;
   width: 0;
-  transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: none;
   overflow: hidden;
   background: var(--bg-card);
   border-left: 1px solid transparent;
@@ -1240,6 +1251,37 @@ body {
 .appeal-modal__note {
   font-size: 13px;
   color: var(--text-secondary);
+}
+
+.appeal-modal__note--status {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.appeal-modal__note--status-pending {
+  background: #fff8df;
+  border-color: rgba(202, 149, 30, 0.38);
+  color: #805d14;
+}
+
+.appeal-modal__note--status-confirmed {
+  background: #edf8e8;
+  border-color: rgba(82, 145, 73, 0.36);
+  color: #376832;
+}
+
+.appeal-modal__note--status-rejected {
+  background: #fff0ee;
+  border-color: rgba(195, 73, 57, 0.34);
+  color: #a33c30;
 }
 
 .appeal-modal__message {

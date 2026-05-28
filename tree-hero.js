@@ -108,6 +108,7 @@ let animationFrameId = 0;
 let heroIsVisible = true;
 let hasDocumentFocus = document.visibilityState === "visible";
 let lastLeafDropAt = 0;
+let lastRenderAt = 0;
 
 const leavesMat = new THREE.ShaderMaterial({
   lights: true,
@@ -177,6 +178,12 @@ function renderFrame(now = performance.now()) {
   if (!shouldAnimate()) {
     return;
   }
+
+  if (now - lastRenderAt < 33) {
+    animationFrameId = window.requestAnimationFrame(renderFrame);
+    return;
+  }
+  lastRenderAt = now;
 
   leavesMat.uniforms.uTime.value += 0.005;
   dropRandomLeaf(now);

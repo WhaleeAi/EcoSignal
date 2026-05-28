@@ -86,6 +86,8 @@
   const APPEAL_CARD_MIN_PX = 330
   const APPEAL_CARD_BASE_CAP_PX = 400
   const APPEAL_CARD_BASE_VW_RATIO = 0.25
+  let appealsGridLayoutFrame = 0
+  let appealsGridTemplate = ''
 
   const PHOTO_PALETTE = [
     ['#f4dca1', '#d3bd8a'],
@@ -97,10 +99,10 @@
   ]
 
   const STATUS_LABELS = {
-    pending: 'Новая',
-    confirmed: 'Подтверждена',
+    pending: 'Ожидает',
+    confirmed: 'Принята',
     in_progress: 'В работе',
-    resolved: 'Решена',
+    resolved: 'Закрыта',
     rejected: 'Отклонена',
   }
 
@@ -145,8 +147,6 @@
     const normalized = String(role || '').toLowerCase()
     if (normalized === 'citizen' || normalized === 'user') return 'Пользователь'
     if (normalized === 'agency') return 'Агент'
-    if (normalized === 'admin') return 'Администратор'
-    if (normalized === 'superadmin') return 'Superadmin'
     return 'Пользователь'
   }
 
@@ -488,8 +488,6 @@
     card.dataset.appealId = String(appeal.id)
     const appealStatus = String(appeal.status || 'pending')
     card.dataset.status = appealStatus
-    card.dataset.assignedAdminId = String(appeal.assigned_admin_id || '')
-
     const statusBorderMap = {
       confirmed: 'appeal-card--status-confirmed',
       in_progress: 'appeal-card--status-in-progress',
@@ -699,13 +697,26 @@
       const item = document.createElement('article')
       item.className = 'agent-chat__message'
       if (message.is_own) item.classList.add('agent-chat__message--own')
+      if (message.sender_type === 'system') {
+        item.classList.add('agent-chat__message--system')
+        const systemText = String(message.message || '').toLowerCase()
+        if (systemText.includes('отклон')) {
+          item.classList.add('agent-chat__message--system-rejected')
+        } else if (systemText.includes('принят') || systemText.includes('направлен')) {
+          item.classList.add('agent-chat__message--system-confirmed')
+        } else {
+          item.classList.add('agent-chat__message--system-pending')
+        }
+      }
 
       const head = document.createElement('div')
       head.className = 'agent-chat__message-head'
 
       const author = document.createElement('p')
       author.className = 'agent-chat__message-author'
-      author.textContent = String(message.sender_name || (message.sender_type === 'agent' ? 'Агент' : 'Вы'))
+      author.textContent = String(
+        message.sender_name || (message.sender_type === 'system' ? 'EcoSignal AI' : message.sender_type === 'agent' ? 'Агент' : 'Вы')
+      )
 
       const time = document.createElement('p')
       time.className = 'agent-chat__message-time'
@@ -782,8 +793,20 @@
   }
 
   function setAssignmentInfo(appeal) {
-    const statusText = STATUS_LABELS[String(appeal?.status || '')] || '—'
-    if (modalStatus) modalStatus.textContent = statusText
+    const status = String(appeal?.status || '')
+    const statusText = STATUS_LABELS[status] || '—'
+    if (modalStatus) {
+      modalStatus.textContent = statusText
+      modalStatus.classList.add('appeal-modal__note--status')
+      modalStatus.classList.remove(
+        'appeal-modal__note--status-pending',
+        'appeal-modal__note--status-confirmed',
+        'appeal-modal__note--status-rejected'
+      )
+      const acceptedStatuses = new Set(['confirmed', 'in_progress', 'resolved'])
+      const tone = status === 'rejected' ? 'rejected' : acceptedStatuses.has(status) ? 'confirmed' : 'pending'
+      modalStatus.classList.add(`appeal-modal__note--status-${tone}`)
+    }
 
     const assignment = appeal?.assignment || null
     if (!assignment) {
@@ -884,16 +907,27 @@
 
   function layoutAppealsGrid() {
     if (!appealsGrid || !appealsSection) return
-    appealsGrid.style.gridTemplateColumns = computeAppealsGridTemplateColumns(appealsSection.clientWidth)
+    const template = computeAppealsGridTemplateColumns(appealsSection.clientWidth)
+    if (template === appealsGridTemplate) return
+    appealsGridTemplate = template
+    appealsGrid.style.gridTemplateColumns = template
+  }
+
+  function scheduleAppealsGridLayout() {
+    if (appealsGridLayoutFrame) return
+    appealsGridLayoutFrame = window.requestAnimationFrame(() => {
+      appealsGridLayoutFrame = 0
+      layoutAppealsGrid()
+    })
   }
 
   function setupAppealsGridLayout() {
     layoutAppealsGrid()
     if (typeof ResizeObserver !== 'undefined' && appealsSection) {
-      const ro = new ResizeObserver(() => layoutAppealsGrid())
+      const ro = new ResizeObserver(() => scheduleAppealsGridLayout())
       ro.observe(appealsSection)
     }
-    window.addEventListener('resize', layoutAppealsGrid)
+    window.addEventListener('resize', scheduleAppealsGridLayout)
   }
 
   function normalizeCarouselWheelDelta(event) {
@@ -1207,14 +1241,9 @@
       throw new Error('__redirect_login__')
     }
 
-    if (data.user.role === 'superadmin') {
-      window.location.replace('superadmin.html')
-      throw new Error('__redirect_superadmin__')
-    }
-
-    if (data.user.role === 'admin') {
-      window.location.replace('admin.html')
-      throw new Error('__redirect_admin__')
+    if (data.user.role === 'admin' && data.user.auth_source === 'org_admins') {
+      window.location.replace('agent.html')
+      throw new Error('__redirect_agent__')
     }
 
     return data.user
@@ -1282,6 +1311,17 @@
     })
   }
 
+  function isSidebarInteractiveTarget(target) {
+    return (
+      target instanceof Element &&
+      Boolean(
+        target.closest(
+          '.sidebar-nav-item, .sidebar-nav-item1, .sidebar-profile, .sidebar-brand'
+        )
+      )
+    )
+  }
+
   function setupSidebarToggle() {
     if (!sidebar || !sidebarToggle) return
 
@@ -1320,7 +1360,15 @@
       setSidebarExpanded(!sidebar.classList.contains('sidebar--expanded'))
     }
 
-    sidebarToggle.addEventListener('click', toggleSidebar)
+    sidebarToggle.addEventListener('click', event => {
+      event.stopPropagation()
+      toggleSidebar()
+    })
+
+    sidebar.addEventListener('click', event => {
+      if (isSidebarInteractiveTarget(event.target)) return
+      toggleSidebar()
+    })
   }
 
   function setupProfileBadge(user) {
@@ -1361,8 +1409,7 @@
     } catch (error) {
       if (
         error?.message === '__redirect_login__' ||
-        error?.message === '__redirect_superadmin__' ||
-        error?.message === '__redirect_admin__' ||
+        error?.message === '__redirect_agent__' ||
         error?.message === '__redirect_role__'
       ) {
         return

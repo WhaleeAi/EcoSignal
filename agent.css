@@ -250,7 +250,7 @@
   flex-shrink: 0;
   width: 0;
   overflow: hidden;
-  transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: none;
   background: #f6f5ef;
   border-left: 1px solid transparent;
   border-right: none;
@@ -370,6 +370,44 @@
   align-self: flex-end;
   background: #eef6e8;
   border-color: rgba(110, 150, 88, 0.45);
+}
+
+.agent-chat__message--system {
+  align-self: center;
+  max-width: 100%;
+  background: #f3f7fb;
+  border-color: rgba(80, 121, 156, 0.28);
+}
+
+.agent-chat__message--system .agent-chat__message-author {
+  color: #315f84;
+}
+
+.agent-chat__message--system-pending {
+  background: #fff8df;
+  border-color: rgba(202, 149, 30, 0.36);
+}
+
+.agent-chat__message--system-pending .agent-chat__message-author {
+  color: #8a6415;
+}
+
+.agent-chat__message--system-confirmed {
+  background: #edf8e8;
+  border-color: rgba(82, 145, 73, 0.36);
+}
+
+.agent-chat__message--system-confirmed .agent-chat__message-author {
+  color: #386d35;
+}
+
+.agent-chat__message--system-rejected {
+  background: #fff0ee;
+  border-color: rgba(195, 73, 57, 0.34);
+}
+
+.agent-chat__message--system-rejected .agent-chat__message-author {
+  color: #a33c30;
 }
 
 .agent-chat__message-head {

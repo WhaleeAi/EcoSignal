@@ -58,8 +58,8 @@
 						<h1>Упростить путь от наблюдения проблемы до организованного реагирования</h1>
 						<p class="wwf-lead">
 							EcoSignal помогает гражданам быстро направлять обращения о
-							состоянии природных объектов, а органам надзора и администраторам
-							получать структурированную информацию для последующей обработки.
+							состоянии природных объектов, а органам надзора получать
+							структурированную информацию для последующей обработки.
 						</p>
 						<div class="hero-actions">
 							<a class="btn btn-report" href="register.html">Перейти к регистрации</a>
@@ -235,10 +235,10 @@
 							</p>
 						</article>
 						<article class="editorial-card editorial-card--tall">
-							<h3>Администраторы</h3>
+							<h3>AI-модерация</h3>
 							<p>
-								Подтверждают заявки, назначают ответственные органы и контролируют
-								целостность общего потока обращений.
+								Проверяет описание и снимки, отклоняет нерелевантные обращения и
+								направляет подтвержденные заявки в профильный филиал.
 							</p>
 						</article>
 					</div>
@@ -289,11 +289,6 @@
 				<p>info@ecosignal.local</p>
 			</div>
 		</footer>
-		<script
-			async
-			src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"
-			crossorigin="anonymous"
-		></script>
 		<script type="importmap">
 			{
 				"imports": {
@@ -302,15 +297,24 @@
 				}
 			}
 		</script>
-		<script type="module" src="tree-hero.js"></script>
+		<script>
+			const shouldLoadTreeScene =
+				window.matchMedia('(min-width: 961px)').matches &&
+				!window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+			if (shouldLoadTreeScene) {
+				import('./tree-hero.js')
+			} else {
+				document.getElementById('previewHack')?.classList.remove('is-loading')
+			}
+		</script>
 		<script>
 			function getDashboardUrl(user) {
 				const userRole = user?.role
 				const authSource = user?.auth_source
 
-				if (userRole === 'superadmin') return 'superadmin.html'
 				if (userRole === 'admin') {
-					return authSource === 'org_admins' ? 'agent.html' : 'admin.html'
+					return authSource === 'org_admins' ? 'agent.html' : 'map.html'
 				}
 
 				return 'map.html'

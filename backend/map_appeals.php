@@ -70,6 +70,7 @@ try {
             a.priority,
             a.latitude,
             a.longitude,
+            ai_message.message AS ai_status_message,
             u.id AS user_id,
             u.first_name,
             u.last_name,
@@ -81,7 +82,16 @@ try {
         INNER JOIN users u ON u.id = a.user_id
         INNER JOIN categories c ON c.id = a.category_id
         {$subcategoryJoinSql}
-        WHERE a.status <> 'rejected'
+        LEFT JOIN LATERAL (
+            SELECT ac.message
+            FROM appeal_chats ac
+            WHERE ac.appeal_id = a.id
+              AND ac.sender_user_id IS NULL
+              AND ac.sender_org_admin_id IS NULL
+            ORDER BY ac.created_at DESC, ac.id DESC
+            LIMIT 1
+        ) ai_message ON TRUE
+        WHERE a.status IN ('confirmed', 'in_progress', 'resolved')
         ORDER BY a.created_at DESC
     ";
 
@@ -185,6 +195,9 @@ try {
             'description' => (string)$row['description'],
             'created_at' => (string)$row['created_at'],
             'priority' => (int)$row['priority'],
+            'ai_status_message' => $row['ai_status_message'] !== null
+                ? (string)$row['ai_status_message']
+                : null,
             'latitude' => (float)$row['latitude'],
             'longitude' => (float)$row['longitude'],
             'category' => (string)$row['category_name'],

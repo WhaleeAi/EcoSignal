@@ -240,20 +240,23 @@ try {
         $messages = array_map(
             static function (array $messageRow) use ($userId): array {
                 $isUserMessage = $messageRow['sender_user_id'] !== null;
+                $isAgentMessage = $messageRow['sender_org_admin_id'] !== null;
 
                 return [
                     'id' => (int)$messageRow['id'],
                     'message' => (string)$messageRow['message'],
                     'created_at' => (string)$messageRow['created_at'],
                     'is_read' => (bool)$messageRow['is_read'],
-                    'sender_type' => $isUserMessage ? 'citizen' : 'agent',
-                    'sender_name' => $isUserMessage
-                        ? buildUserFullName(
+                    'sender_type' => $isUserMessage ? 'citizen' : ($isAgentMessage ? 'agent' : 'system'),
+                    'sender_name' => match (true) {
+                        $isUserMessage => buildUserFullName(
                             $messageRow['user_first_name'] ?? null,
                             $messageRow['user_last_name'] ?? null,
                             $messageRow['user_email'] ?? null
-                        )
-                        : (string)($messageRow['org_admin_login'] ?? 'Агент'),
+                        ),
+                        $isAgentMessage => (string)($messageRow['org_admin_login'] ?? 'Агент'),
+                        default => 'EcoSignal AI',
+                    },
                     'is_own' => $isUserMessage && (int)$messageRow['sender_user_id'] === $userId,
                 ];
             },

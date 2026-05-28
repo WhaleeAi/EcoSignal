@@ -226,6 +226,46 @@
     return `${coords[0].toFixed(6)}, ${coords[1].toFixed(6)}`
   }
 
+  function loadImageFromFile(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file)
+      const image = new Image()
+      image.onload = () => {
+        URL.revokeObjectURL(url)
+        resolve(image)
+      }
+      image.onerror = () => {
+        URL.revokeObjectURL(url)
+        reject(new Error('Не удалось обработать изображение'))
+      }
+      image.src = url
+    })
+  }
+
+  async function compressAppealImage(file) {
+    const maxSide = 1600
+    const image = await loadImageFromFile(file)
+    const sourceWidth = image.naturalWidth || image.width
+    const sourceHeight = image.naturalHeight || image.height
+    const scale = Math.min(1, maxSide / Math.max(sourceWidth, sourceHeight))
+    const width = Math.max(1, Math.round(sourceWidth * scale))
+    const height = Math.max(1, Math.round(sourceHeight * scale))
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const context = canvas.getContext('2d')
+
+    if (!context) return file
+
+    context.drawImage(image, 0, 0, width, height)
+
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.82))
+    if (!blob || blob.size >= file.size) return file
+
+    const baseName = String(file.name || 'appeal-photo').replace(/\.[^.]+$/, '')
+    return new File([blob], `${baseName}.jpg`, { type: 'image/jpeg', lastModified: Date.now() })
+  }
+
   function normalizeText(value) {
     return String(value || '').trim().toLowerCase()
   }
@@ -285,7 +325,6 @@
     if (normalized === 'citizen' || normalized === 'user') return 'Пользователь'
     if (normalized === 'agency') return 'Агент'
     if (normalized === 'admin') return 'Администратор'
-    if (normalized === 'superadmin') return 'Superadmin'
     return 'Пользователь'
   }
 
@@ -402,6 +441,18 @@
     sidebarToggle.setAttribute('aria-expanded', String(expanded))
     sidebarToggle.setAttribute('aria-label', expanded ? 'Свернуть панель' : 'Развернуть панель')
     persistSidebarExpanded(expanded)
+    rerenderMapAfterLayoutShift()
+  }
+
+  function isSidebarInteractiveTarget(target) {
+    return (
+      target instanceof Element &&
+      Boolean(
+        target.closest(
+          '.sidebar-nav-item, .sidebar-nav-item1, .sidebar-profile, .sidebar-brand'
+        )
+      )
+    )
   }
 
   function setupSidebarToggle() {
@@ -414,13 +465,18 @@
       sidebar.classList.add('sidebar--ready')
     })
 
-    sidebar.addEventListener('transitionend', event => {
-      if (event.propertyName !== 'width') return
-      rerenderMapAfterLayoutShift()
+    const toggleSidebar = () => {
+      setSidebarExpanded(!sidebar.classList.contains('sidebar--expanded'))
+    }
+
+    sidebarToggle.addEventListener('click', event => {
+      event.stopPropagation()
+      toggleSidebar()
     })
 
-    sidebarToggle.addEventListener('click', () => {
-      setSidebarExpanded(!sidebar.classList.contains('sidebar--expanded'))
+    sidebar.addEventListener('click', event => {
+      if (isSidebarInteractiveTarget(event.target)) return
+      toggleSidebar()
     })
   }
 
@@ -794,6 +850,29 @@
     return labels[String(status || '')] || String(status || 'Неизвестно')
   }
 
+  function getAppealStatusText(appeal) {
+    const status = String(appeal.status || '')
+    if (status === 'pending') return 'Ожидает проверки'
+    if (status === 'confirmed') return 'Принята'
+    if (status === 'rejected') return 'Отклонена'
+    return formatAppealStatus(status)
+  }
+
+  function getAppealStatusTone(appeal) {
+    const status = String(appeal.status || '')
+    const message = String(appeal.ai_status_message || '').toLowerCase()
+
+    if (status === 'rejected' || message.includes('отклон')) return 'rejected'
+    if (
+      status === 'confirmed' ||
+      status === 'in_progress' ||
+      status === 'resolved' ||
+      message.includes('принят') ||
+      message.includes('направлен')
+    ) return 'confirmed'
+    return 'pending'
+  }
+
   function formatAppealDate(rawDate) {
     const parsed = new Date(rawDate)
     if (Number.isNaN(parsed.getTime())) {
@@ -918,7 +997,6 @@
     const userLevel = Number(appeal.user?.level || 0)
     const category = appeal.category || '-'
     const subcategory = appeal.subcategory || 'Без подкатегории'
-    const priority = Number(appeal.priority || 0)
 
     appealDetailsTitle.textContent = `Заявка #${appeal.id}`
     if (appealDetailsBadge) {
@@ -926,7 +1004,13 @@
     }
     appealDetailsUser.textContent = `${userName} (${userLevel} уровень)`
     appealDetailsCategory.textContent = `${category} / ${subcategory}`
-    appealDetailsStatus.textContent = `${formatAppealStatus(appeal.status)} | Приоритет ${priority}`
+    appealDetailsStatus.textContent = getAppealStatusText(appeal)
+    appealDetailsStatus.classList.remove(
+      'appeal-details-modal__meta-value--pending',
+      'appeal-details-modal__meta-value--confirmed',
+      'appeal-details-modal__meta-value--rejected'
+    )
+    appealDetailsStatus.classList.add(`appeal-details-modal__meta-value--${getAppealStatusTone(appeal)}`)
     appealDetailsDate.textContent = formatAppealDate(appeal.created_at)
     appealDetailsCoords.textContent = `${Number(appeal.latitude).toFixed(6)}, ${Number(appeal.longitude).toFixed(6)}`
     appealDetailsDescription.textContent = String(appeal.description || 'Описание не указано')
@@ -1200,7 +1284,10 @@
       throw new Error(data.message || 'Не удалось загрузить заявки карты')
     }
 
-    allAppeals = Array.isArray(data.appeals) ? data.appeals : []
+    const mapStatuses = new Set(['confirmed', 'in_progress', 'resolved'])
+    allAppeals = (Array.isArray(data.appeals) ? data.appeals : []).filter(appeal =>
+      mapStatuses.has(String(appeal.status || ''))
+    )
     refreshVisibleAppeals()
   }
 
@@ -1222,10 +1309,26 @@
     const description = descriptionInput.value.trim()
     const priority = getSelectedPriorityValue()
     const imageFiles = Array.from(imagesInput.files || [])
+    const allowedImageTypes = new Set(['image/png', 'image/jpeg'])
+    const allowedImageExtensions = new Set(['png', 'jpg', 'jpeg'])
+    const maxImageSize = 5 * 1024 * 1024
 
     if (!categoryId || !description) {
       setFormMessage('Заполните обязательные поля: категория и описание', true)
       return
+    }
+
+    for (const file of imageFiles) {
+      const extension = String(file.name || '').split('.').pop()?.toLowerCase() || ''
+      if (!allowedImageTypes.has(file.type) || !allowedImageExtensions.has(extension)) {
+        setFormMessage('Можно прикреплять только PNG, JPG и JPEG', true)
+        return
+      }
+
+      if (file.size > maxImageSize) {
+        setFormMessage('Размер каждого фото не должен превышать 5 МБ', true)
+        return
+      }
     }
 
     const submitButton = form.querySelector('button[type="submit"]')
@@ -1246,7 +1349,17 @@
       formData.append('longitude', String(selectedCoords[1]))
       formData.append('priority', String(priority))
 
+      const filesForUpload = []
       for (const file of imageFiles) {
+        const compressed = await compressAppealImage(file)
+        if (compressed.size > maxImageSize) {
+          setFormMessage('Размер каждого фото после сжатия не должен превышать 5 МБ', true)
+          return
+        }
+        filesForUpload.push(compressed)
+      }
+
+      for (const file of filesForUpload) {
         formData.append('images[]', file, file.name)
       }
 
@@ -1258,17 +1371,45 @@
         body: formData,
       })
 
-      const data = await response.json()
+      const data = await response.json().catch(() => ({}))
 
       if (!response.ok) {
-        setFormMessage(data.message || 'Не удалось отправить заявку', true)
+        setFormMessage(data.message || 'Не удалось отправить заявку. Попробуйте ещё раз.', true)
         return
       }
 
+      const appealId = Number(data.appeal?.id || 0)
       resetAppealForm()
       clearSelectedPoint()
       await loadAppeals()
-      setFormMessage('Заявка успешно отправлена')
+      setFormMessage('Заявка отправлена. Идет проверка...')
+
+      if (data.ai_processing_required && appealId > 0) {
+        try {
+          const aiResponse = await fetch('backend/process_appeal_ai.php', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ appeal_id: appealId }),
+          })
+          const aiData = await aiResponse.json().catch(() => ({}))
+
+          await loadAppeals()
+          if (!aiResponse.ok) {
+            setFormMessage(aiData.message || 'Заявка создана и ожидает проверки.', true)
+            return
+          }
+
+          setFormMessage(aiData.message || 'Проверка завершена')
+        } catch (_error) {
+          await loadAppeals()
+          setFormMessage('Заявка создана и ожидает проверки.', true)
+        }
+      } else {
+        setFormMessage('Заявка успешно отправлена')
+      }
     } catch (error) {
       setFormMessage('Ошибка соединения с сервером', true)
     } finally {
