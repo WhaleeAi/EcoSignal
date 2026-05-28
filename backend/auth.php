@@ -38,7 +38,7 @@ function requireAuth(): array
         $subjectId = (int)($decoded->sub ?? 0);
         $authSource = (string)($decoded->auth_source ?? 'users');
 
-        if ($subjectId <= 0 || !in_array($authSource, ['users', 'org_admins'], true)) {
+        if ($subjectId <= 0 || !in_array($authSource, ['users', 'org_admins', 'superadmins'], true)) {
             jsonResponse([
                 'message' => 'Некорректный токен',
             ], 401);
@@ -107,6 +107,36 @@ function requireAuth(): array
                 'created_at' => (string)$orgAdmin['created_at'],
                 'last_login_at' => $orgAdmin['last_login_at'] !== null ? (string)$orgAdmin['last_login_at'] : null,
                 'auth_source' => 'org_admins',
+            ];
+        }
+
+        if ($authSource === 'superadmins') {
+            $stmt = $pdo->prepare('
+                SELECT id, login, full_name, role, is_active, created_at, last_login_at
+                FROM superadmins
+                WHERE id = :id
+                LIMIT 1
+            ');
+            $stmt->execute(['id' => $subjectId]);
+            $superadmin = $stmt->fetch();
+
+            if (!$superadmin || !(bool)$superadmin['is_active']) {
+                jsonResponse([
+                    'message' => 'Пользователь не найден',
+                ], 401);
+            }
+
+            return [
+                'id' => (int)$superadmin['id'],
+                'login' => (string)$superadmin['login'],
+                'email' => (string)$superadmin['login'],
+                'name' => trim((string)($superadmin['full_name'] ?? '')) !== ''
+                    ? (string)$superadmin['full_name']
+                    : (string)$superadmin['login'],
+                'role' => (string)$superadmin['role'],
+                'created_at' => (string)$superadmin['created_at'],
+                'last_login_at' => $superadmin['last_login_at'] !== null ? (string)$superadmin['last_login_at'] : null,
+                'auth_source' => 'superadmins',
             ];
         }
 

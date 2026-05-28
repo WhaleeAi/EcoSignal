@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EcoSignal | Суперадмин</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@300;400;500;600&family=Roboto+Slab:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="admin.css" />
+    <link rel="stylesheet" href="superadmin.css" />
+  </head>
+  <body>
+    <div class="admin-page superadmin-page">
+      <aside class="sidebar" id="sidebar" aria-label="Боковое меню">
+        <div class="sidebar-top">
+          <div class="sidebar-head">
+            <button class="sidebar-brand" type="button" aria-label="EcoSignal">
+              <img class="sidebar-brand-icon" src="./icons/Group.svg" alt="" />
+              <span class="sidebar-brand-name">EcoSignal</span>
+            </button>
+            <button
+              class="sidebar-nav-item1"
+              id="sidebarToggle"
+              type="button"
+              aria-label="Развернуть панель"
+              aria-expanded="false"
+            >
+              <img src="./icons/aside-slider.svg" alt="" />
+            </button>
+          </div>
+
+          <nav class="sidebar-nav" aria-label="Навигация">
+            <button
+              class="sidebar-nav-item sidebar-nav-item--active"
+              type="button"
+              data-href="superadmin.html"
+              aria-label="Оргадмины"
+              aria-current="page"
+            >
+              <img src="./icons/Home.svg" alt="" />
+              <span class="sidebar-nav-label">Оргадмины</span>
+            </button>
+            <button class="sidebar-nav-item" type="button" data-action="logout" aria-label="Выход">
+              <img src="./icons/logout.svg" alt="" />
+              <span class="sidebar-nav-label">Выход</span>
+            </button>
+          </nav>
+        </div>
+
+        <button class="sidebar-profile" id="sidebarProfileButton" type="button" aria-label="Профиль">
+          <span class="sidebar-avatar" id="sidebarAvatar">S</span>
+          <span class="sidebar-profile-meta">
+            <span class="sidebar-profile-name" id="sidebarProfileName">Суперадмин</span>
+            <span class="sidebar-profile-level">Управление доступом</span>
+          </span>
+        </button>
+      </aside>
+
+      <div class="admin-workspace">
+        <main class="admin-content superadmin-content">
+          <header class="superadmin-header">
+            <div>
+              <h1 class="admin-title">Суперадмин</h1>
+              <p class="superadmin-subtitle">Назначение оргадминов по органам и филиалам.</p>
+            </div>
+          </header>
+
+          <section class="superadmin-stats" aria-label="Сводка">
+            <article class="superadmin-stat">
+              <span>Органы</span>
+              <strong id="organizationsCount">0</strong>
+            </article>
+            <article class="superadmin-stat">
+              <span>Филиалы</span>
+              <strong id="filialsCount">0</strong>
+            </article>
+            <article class="superadmin-stat">
+              <span>Активные оргадмины</span>
+              <strong id="activeAdminsCount">0</strong>
+            </article>
+          </section>
+
+          <section class="superadmin-layout">
+            <article class="superadmin-panel superadmin-panel--form">
+              <div class="superadmin-panel__head">
+                <h2 id="formTitle">Новый оргадмин</h2>
+                <button class="superadmin-link-btn" id="resetFormButton" type="button">Очистить</button>
+              </div>
+
+              <form class="superadmin-form" id="adminForm">
+                <input id="adminId" type="hidden" />
+
+                <label>
+                  <span>Логин</span>
+                  <input id="adminLogin" type="text" maxlength="255" autocomplete="off" required />
+                </label>
+
+                <label>
+                  <span>Пароль</span>
+                  <input id="adminPassword" type="password" maxlength="255" autocomplete="new-password" />
+                </label>
+
+                <label>
+                  <span>Орган</span>
+                  <select id="organizationSelect" required></select>
+                </label>
+
+                <label>
+                  <span>Филиал</span>
+                  <select id="filialSelect" required></select>
+                </label>
+
+                <label class="superadmin-check">
+                  <input id="adminActive" type="checkbox" checked />
+                  <span>Активная учетная запись</span>
+                </label>
+
+                <p class="superadmin-message" id="formMessage" aria-live="polite"></p>
+
+                <button class="superadmin-submit" id="saveAdminButton" type="submit">Сохранить</button>
+              </form>
+            </article>
+
+            <article class="superadmin-panel superadmin-panel--table">
+              <div class="superadmin-panel__head">
+                <h2>Оргадмины</h2>
+                <p id="adminsSummary">0 записей</p>
+              </div>
+
+              <div class="superadmin-table-wrap">
+                <table class="superadmin-table">
+                  <thead>
+                    <tr>
+                      <th>Логин</th>
+                      <th>Орган</th>
+                      <th>Филиал</th>
+                      <th>Координаты</th>
+                      <th>Статус</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminsTableBody"></tbody>
+                </table>
+              </div>
+            </article>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script src="superadmin.js"></script>
+  </body>
+</html>

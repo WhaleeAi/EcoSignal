@@ -158,6 +158,57 @@ function getPublicAiErrorMessage(string $errorMessage): string
     return 'Проверка временно недоступна. Заявка остается в ожидании.';
 }
 
+function organizationExists(PDO $pdo, int $organizationId): bool
+{
+    $stmt = $pdo->prepare('
+        SELECT 1
+        FROM organizations
+        WHERE id = :organization_id
+        LIMIT 1
+    ');
+    $stmt->execute(['organization_id' => $organizationId]);
+
+    return (bool)$stmt->fetchColumn();
+}
+
+function findNearestActiveFilial(PDO $pdo, int $organizationId, float $latitude, float $longitude): ?array
+{
+    $stmt = $pdo->prepare('
+        SELECT
+            id,
+            name,
+            latitude,
+            longitude,
+            (
+                6371 * acos(
+                    LEAST(
+                        1,
+                        GREATEST(
+                            -1,
+                            cos(radians(:appeal_lat_1)) * cos(radians(latitude)) *
+                            cos(radians(longitude) - radians(:appeal_lng_1)) +
+                            sin(radians(:appeal_lat_2)) * sin(radians(latitude))
+                        )
+                    )
+                )
+            ) AS distance_km
+        FROM filials
+        WHERE organization_id = :organization_id
+          AND is_active = TRUE
+        ORDER BY distance_km ASC, id ASC
+        LIMIT 1
+    ');
+    $stmt->execute([
+        'organization_id' => $organizationId,
+        'appeal_lat_1' => $latitude,
+        'appeal_lat_2' => $latitude,
+        'appeal_lng_1' => $longitude,
+    ]);
+
+    $filial = $stmt->fetch();
+    return $filial ?: null;
+}
+
 $user = requireAuth();
 $input = getJsonInput();
 $appealId = (int)($input['appeal_id'] ?? 0);
@@ -215,14 +266,32 @@ try {
 
     if ($aiDecision['status'] === 'confirmed') {
         $organizationId = (int)($aiDecision['organization_id'] ?? 0);
-        $filialId = (int)($aiDecision['filial_id'] ?? 0);
+        $nearestFilial = $organizationId > 0
+            ? findNearestActiveFilial(
+                $pdo,
+                $organizationId,
+                (float)$appeal['latitude'],
+                (float)$appeal['longitude']
+            )
+            : null;
 
-        if ($organizationId <= 0 || $filialId <= 0 || !validateAiAssignment($pdo, $organizationId, $filialId)) {
+        if ($organizationId <= 0 || !organizationExists($pdo, $organizationId) || !$nearestFilial) {
             $aiDecision['status'] = 'rejected';
             $aiDecision['organization_id'] = null;
             $aiDecision['filial_id'] = null;
             $aiDecision['priority'] = 0;
-            $aiDecision['reason'] = 'AI выбрала недоступный орган или филиал.';
+            $aiDecision['reason'] = 'AI выбрала недоступный орган или для органа нет активного филиала.';
+        } else {
+            $aiDecision['filial_id'] = (int)$nearestFilial['id'];
+            $aiDecision['filial_distance_km'] = round((float)$nearestFilial['distance_km'], 2);
+
+            if (!validateAiAssignment($pdo, $organizationId, (int)$nearestFilial['id'])) {
+                $aiDecision['status'] = 'rejected';
+                $aiDecision['organization_id'] = null;
+                $aiDecision['filial_id'] = null;
+                $aiDecision['priority'] = 0;
+                $aiDecision['reason'] = 'Ближайший филиал недоступен для назначения.';
+            }
         }
     }
 

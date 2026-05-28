@@ -33,9 +33,22 @@ try {
     $appUser = $userStmt->fetch();
 
     $orgAdmin = null;
+    $superadmin = null;
     $hasOrgAdmins = (bool)$pdo->query("SELECT to_regclass('public.org_admins') IS NOT NULL")->fetchColumn();
     $hasOrganizations = (bool)$pdo->query("SELECT to_regclass('public.organizations') IS NOT NULL")->fetchColumn();
     $hasFilials = (bool)$pdo->query("SELECT to_regclass('public.filials') IS NOT NULL")->fetchColumn();
+    $hasSuperadmins = (bool)$pdo->query("SELECT to_regclass('public.superadmins') IS NOT NULL")->fetchColumn();
+
+    if ($hasSuperadmins) {
+        $superadminStmt = $pdo->prepare('
+            SELECT id, login, password_hash, full_name, role, is_active, created_at, last_login_at
+            FROM superadmins
+            WHERE login = :login
+            LIMIT 1
+        ');
+        $superadminStmt->execute(['login' => $email]);
+        $superadmin = $superadminStmt->fetch();
+    }
 
     if ($hasOrgAdmins && $hasOrganizations) {
         $orgSql = '
@@ -90,6 +103,46 @@ try {
             'message' => 'Вход выполнен успешно',
             'token' => $token,
             'user' => $appUser,
+        ]);
+    }
+
+    if ($superadmin && password_verify($password, (string)$superadmin['password_hash'])) {
+        if (!(bool)$superadmin['is_active']) {
+            jsonResponse(['message' => 'Учетная запись деактивирована'], 403);
+        }
+
+        $updateLastLoginStmt = $pdo->prepare('
+            UPDATE superadmins
+            SET last_login_at = NOW()
+            WHERE id = :id
+        ');
+        $updateLastLoginStmt->execute(['id' => (int)$superadmin['id']]);
+
+        $token = createJwtToken(
+            [
+                'id' => (int)$superadmin['id'],
+                'login' => (string)$superadmin['login'],
+                'email' => (string)$superadmin['login'],
+                'role' => (string)$superadmin['role'],
+            ],
+            'superadmins'
+        );
+
+        jsonResponse([
+            'message' => 'Вход выполнен успешно',
+            'token' => $token,
+            'user' => [
+                'id' => (int)$superadmin['id'],
+                'login' => (string)$superadmin['login'],
+                'email' => (string)$superadmin['login'],
+                'name' => trim((string)($superadmin['full_name'] ?? '')) !== ''
+                    ? (string)$superadmin['full_name']
+                    : (string)$superadmin['login'],
+                'role' => (string)$superadmin['role'],
+                'created_at' => (string)$superadmin['created_at'],
+                'last_login_at' => $superadmin['last_login_at'] !== null ? (string)$superadmin['last_login_at'] : null,
+                'auth_source' => 'superadmins',
+            ],
         ]);
     }
 

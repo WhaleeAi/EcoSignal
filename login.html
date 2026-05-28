@@ -43,9 +43,9 @@
 								<input
 									id="email"
 									name="email"
-									type="email"
+									type="text"
 									autocomplete="off"
-									placeholder="Введите email"
+									placeholder="Введите email или логин"
 								/>
 								<input
 									id="password"
@@ -81,6 +81,10 @@
 			function getDashboardUrl(user) {
 				const userRole = user?.role
 				const authSource = user?.auth_source
+
+				if (userRole === 'superadmin' && authSource === 'superadmins') {
+					return 'superadmin.html'
+				}
 
 				if (userRole === 'admin') {
 					return authSource === 'org_admins' ? 'agent.html' : 'map.html'
