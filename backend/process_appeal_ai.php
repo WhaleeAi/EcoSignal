@@ -36,6 +36,23 @@ function insertAiSystemChatMessage(PDO $pdo, int $appealId, string $message): vo
     ]);
 }
 
+function logAiProcessingError(int $appealId, Throwable $error, string $stage): void
+{
+    $message = sprintf(
+        "[%s] %s for appeal #%d: %s in %s:%d%s",
+        date('Y-m-d H:i:s'),
+        $stage,
+        $appealId,
+        $error->getMessage(),
+        $error->getFile(),
+        $error->getLine(),
+        PHP_EOL
+    );
+
+    error_log(trim($message));
+    error_log($message, 3, __DIR__ . '/ai_errors.log');
+}
+
 function fetchAppealForAi(PDO $pdo, int $appealId, int $userId): ?array
 {
     $stmt = $pdo->prepare('
@@ -181,6 +198,8 @@ try {
     try {
         $aiDecision = moderateAppealWithAi($appealForAi, $preparedImages, $references);
     } catch (Throwable $aiError) {
+        logAiProcessingError($appealId, $aiError, 'EcoSignal AI moderation failed');
+
         $publicErrorMessage = getPublicAiErrorMessage($aiError->getMessage());
 
         insertAiSystemChatMessage(
@@ -318,6 +337,8 @@ try {
     if (($pdo ?? null) instanceof PDO && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
+
+    logAiProcessingError($appealId, $e, 'EcoSignal AI processing failed');
 
     jsonResponse([
         'message' => 'Проверка временно недоступна. Заявка остается в ожидании.',

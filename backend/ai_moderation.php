@@ -18,6 +18,21 @@ function getOpenRouterApiKey(): string
     throw new RuntimeException('OPENROUTER_API_KEY is not configured');
 }
 
+function getOpenRouterCaBundlePath(): ?string
+{
+    $envPath = getenv('OPENROUTER_CA_BUNDLE');
+    if (is_string($envPath) && trim($envPath) !== '') {
+        return trim($envPath);
+    }
+
+    $fallbackPath = 'C:\\Program Files\\Git\\usr\\ssl\\certs\\ca-bundle.crt';
+    if (is_readable($fallbackPath)) {
+        return $fallbackPath;
+    }
+
+    return null;
+}
+
 function buildAiModerationPrompt(): string
 {
     return <<<'PROMPT'
@@ -217,19 +232,32 @@ function sendOpenRouterChatRequest(array $payload): array
             throw new RuntimeException('Failed to initialize OpenRouter request');
         }
 
-        curl_setopt_array($ch, [
+        $curlOptions = [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST => true,
             CURLOPT_CONNECTTIMEOUT => 15,
             CURLOPT_TIMEOUT => 60,
             CURLOPT_HTTPHEADER => $headers,
             CURLOPT_POSTFIELDS => $body,
-        ]);
+        ];
+
+        $caBundlePath = getOpenRouterCaBundlePath();
+        if ($caBundlePath !== null) {
+            if (!is_readable($caBundlePath)) {
+                throw new RuntimeException('OpenRouter CA bundle is not readable: ' . $caBundlePath);
+            }
+
+            $curlOptions[CURLOPT_CAINFO] = $caBundlePath;
+        }
+
+        curl_setopt_array($ch, $curlOptions);
 
         $response = curl_exec($ch);
         $httpCode = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
         $curlError = curl_error($ch);
-        curl_close($ch);
+        if (PHP_VERSION_ID < 80500) {
+            curl_close($ch);
+        }
 
         if ($response === false || $response === '') {
             throw new RuntimeException('OpenRouter request failed: ' . $curlError);
