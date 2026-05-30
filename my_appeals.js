@@ -190,7 +190,7 @@
   }
 
   function setSelectedPriorityValue(value) {
-    const targetValue = String(Number.isFinite(value) ? value : 0)
+    const targetValue = String(Number.isFinite(value) ? value : 1)
     let wasSet = false
     modalPriorityRadios.forEach(input => {
       const checked = input.value === targetValue
