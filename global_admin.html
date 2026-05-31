@@ -6,7 +6,10 @@
     <title>EcoSignal | Глобальный админ</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@300;400;500;700&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@300;400;500;600&family=Roboto+Slab:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="system_admin.css" />
   </head>
   <body class="system-admin-page">
@@ -17,50 +20,151 @@
           <span>EcoSignal</span>
         </div>
         <nav class="system-admin-nav">
-          <button class="is-active" type="button" data-section="overview">Аналитика</button>
+          <button class="is-active" type="button" data-section="overview">Обзор</button>
           <button type="button" data-section="appeals">Заявки</button>
+          <button type="button" data-section="organizations">Органы</button>
+          <button type="button" data-section="roles">Роли</button>
+          <button type="button" data-section="ai">AI</button>
           <button type="button" data-section="audit">Аудит</button>
         </nav>
         <button class="system-admin-logout" id="logoutButton" type="button">Выйти</button>
       </aside>
+
       <main class="system-admin-main">
         <header class="system-admin-header">
           <div>
             <h1>Глобальный админ</h1>
-            <p>Сквозная картина по заявкам, пользователям, органам и действиям в системе.</p>
+            <p>Сводная картина по заявкам, ролям, организациям, AI-проверкам и действиям в системе.</p>
           </div>
-          <button class="system-admin-action secondary" id="exportButton" type="button">Экспорт отчета</button>
+          <div class="system-admin-actions">
+            <button class="system-admin-action secondary" id="refreshButton" type="button">Обновить</button>
+            <button class="system-admin-action secondary" id="exportButton" type="button">Экспорт отчета</button>
+          </div>
         </header>
 
+        <p class="system-admin-message" id="message" aria-live="polite"></p>
+
         <section class="system-admin-section is-active" id="section-overview">
-          <div class="system-admin-grid" id="metricsGrid"></div>
+          <div class="system-admin-grid system-admin-grid--wide" id="metricsGrid"></div>
+          <div class="system-admin-two-columns">
+            <article class="system-admin-panel">
+              <h2>Статусы заявок</h2>
+              <div class="system-admin-bars" id="statusBars"></div>
+            </article>
+            <article class="system-admin-panel">
+              <h2>Динамика за 14 дней</h2>
+              <div class="system-admin-bars" id="dynamicBars"></div>
+            </article>
+          </div>
+          <div class="system-admin-two-columns">
+            <article class="system-admin-panel">
+              <h2>Категории</h2>
+              <div class="system-admin-table-wrap">
+                <table class="system-admin-table">
+                  <thead><tr><th>Категория</th><th>Заявок</th></tr></thead>
+                  <tbody id="categoriesBody"></tbody>
+                </table>
+              </div>
+            </article>
+            <article class="system-admin-panel">
+              <h2>Проблемные зоны</h2>
+              <div class="system-admin-table-wrap">
+                <table class="system-admin-table">
+                  <thead><tr><th>Координаты</th><th>Заявок</th><th>Последняя</th></tr></thead>
+                  <tbody id="zonesBody"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="system-admin-section" id="section-appeals">
           <article class="system-admin-panel">
-            <h2>Статусы и динамика</h2>
-            <div class="system-admin-table-wrap">
-              <table class="system-admin-table">
-                <thead><tr><th>Срез</th><th>Значение</th><th>Количество</th></tr></thead>
-                <tbody id="overviewBody"></tbody>
-              </table>
+            <div class="system-admin-panel-header">
+              <h2>Операционный контроль заявок</h2>
+              <div class="system-admin-filters">
+                <select id="statusFilter" aria-label="Статус заявки">
+                  <option value="">Все статусы</option>
+                </select>
+                <select id="organizationFilter" aria-label="Организация">
+                  <option value="">Все организации</option>
+                </select>
+                <input id="appealSearch" type="search" placeholder="ID, пользователь, агент" />
+              </div>
             </div>
-          </article>
-          <article class="system-admin-panel">
-            <h2>Проблемные зоны</h2>
             <div class="system-admin-table-wrap">
               <table class="system-admin-table">
-                <thead><tr><th>Широта</th><th>Долгота</th><th>Заявок</th></tr></thead>
-                <tbody id="zonesBody"></tbody>
+                <thead><tr><th>ID</th><th>Статус</th><th>Приоритет</th><th>Категория</th><th>Пользователь</th><th>Орган</th><th>Ответственный</th><th>Создана</th></tr></thead>
+                <tbody id="appealsBody"></tbody>
               </table>
             </div>
           </article>
         </section>
 
-        <section class="system-admin-section" id="section-appeals">
+        <section class="system-admin-section" id="section-organizations">
           <article class="system-admin-panel">
-            <h2>Все заявки</h2>
+            <h2>Нагрузка органов и филиалов</h2>
             <div class="system-admin-table-wrap">
               <table class="system-admin-table">
-                <thead><tr><th>ID</th><th>Статус</th><th>Категория</th><th>Орган</th><th>Ответственный</th><th>Дата</th></tr></thead>
-                <tbody id="appealsBody"></tbody>
+                <thead><tr><th>Орган</th><th>Филиал</th><th>Агенты</th><th>Назначено</th><th>В работе</th><th>Решено</th><th>Отклонено</th></tr></thead>
+                <tbody id="organizationsBody"></tbody>
+              </table>
+            </div>
+          </article>
+          <article class="system-admin-panel">
+            <h2>Агенты с наибольшей нагрузкой</h2>
+            <div class="system-admin-table-wrap">
+              <table class="system-admin-table">
+                <thead><tr><th>Агент</th><th>Орган</th><th>Филиал</th><th>Активен</th><th>Назначено</th><th>В работе</th><th>Решено</th><th>Последнее назначение</th></tr></thead>
+                <tbody id="agentsBody"></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section class="system-admin-section" id="section-roles">
+          <div class="system-admin-two-columns">
+            <article class="system-admin-panel">
+              <h2>Пользователи по ролям</h2>
+              <div class="system-admin-table-wrap">
+                <table class="system-admin-table">
+                  <thead><tr><th>Источник</th><th>Роль</th><th>Активные</th><th>Всего</th></tr></thead>
+                  <tbody id="rolesBody"></tbody>
+                </table>
+              </div>
+            </article>
+            <article class="system-admin-panel">
+              <div class="system-admin-panel-header">
+                <h2>Системные администраторы</h2>
+                <button class="system-admin-action secondary" id="addSystemAdminButton" type="button">Добавить</button>
+              </div>
+              <div class="system-admin-table-wrap">
+                <table class="system-admin-table">
+                  <thead><tr><th>Логин</th><th>Роль</th><th>Активен</th><th>Последний вход</th><th></th></tr></thead>
+                  <tbody id="systemAdminsBody"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+          <article class="system-admin-panel">
+            <h2>Обычные пользователи</h2>
+            <div class="system-admin-table-wrap">
+              <table class="system-admin-table">
+                <thead><tr><th>ID</th><th>Пользователь</th><th>Email</th><th>Роль</th><th>Заявок</th><th>Последняя заявка</th><th></th></tr></thead>
+                <tbody id="usersBody"></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section class="system-admin-section" id="section-ai">
+          <div class="system-admin-grid" id="aiMetricsGrid"></div>
+          <article class="system-admin-panel">
+            <h2>Последние AI-проверки</h2>
+            <div class="system-admin-table-wrap">
+              <table class="system-admin-table">
+                <thead><tr><th>Заявка</th><th>Статус</th><th>Модель</th><th>Уверенность</th><th>Причина</th><th>Завершено</th></tr></thead>
+                <tbody id="aiRunsBody"></tbody>
               </table>
             </div>
           </article>
@@ -78,6 +182,63 @@
           </article>
         </section>
       </main>
+    </div>
+
+    <div class="system-admin-modal" id="systemAdminModal" hidden>
+      <div class="system-admin-modal__backdrop" data-close-modal></div>
+      <form class="system-admin-modal__dialog system-admin-form" id="systemAdminForm">
+        <div class="system-admin-modal__header">
+          <h2>Новый системный администратор</h2>
+          <button type="button" class="system-admin-icon-button" data-close-modal>×</button>
+        </div>
+        <label>
+          Логин
+          <input name="login" required autocomplete="username" />
+        </label>
+        <label>
+          Email
+          <input name="email" type="email" autocomplete="email" />
+        </label>
+        <label>
+          Имя
+          <input name="full_name" autocomplete="name" />
+        </label>
+        <label>
+          Роль
+          <select name="role" required>
+            <option value="global_admin">Глобальный админ</option>
+            <option value="ai_admin">AI-админ</option>
+            <option value="superadmin">Супер-админ</option>
+          </select>
+        </label>
+        <label>
+          Пароль
+          <input name="password" type="password" required minlength="6" autocomplete="new-password" />
+        </label>
+        <div class="system-admin-actions">
+          <button class="system-admin-action" type="submit">Добавить</button>
+          <button class="system-admin-action secondary" type="button" data-close-modal>Отмена</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="system-admin-modal" id="exportModal" hidden>
+      <div class="system-admin-modal__backdrop" data-close-export></div>
+      <form class="system-admin-modal__dialog system-admin-form" id="exportForm">
+        <div class="system-admin-modal__header">
+          <h2>Экспорт отчета</h2>
+          <button type="button" class="system-admin-icon-button" data-close-export>×</button>
+        </div>
+        <p class="system-admin-muted" id="exportModalHint"></p>
+        <label>
+          Блок отчета
+          <select id="exportBlockSelect" name="block" required></select>
+        </label>
+        <div class="system-admin-actions">
+          <button class="system-admin-action" type="submit">Скачать Excel</button>
+          <button class="system-admin-action secondary" type="button" data-close-export>Отмена</button>
+        </div>
+      </form>
     </div>
     <script src="global_admin.js"></script>
   </body>

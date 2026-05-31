@@ -48,10 +48,35 @@ final class GlobalAdminController extends Controller
         $this->respond(fn(array $user): array => $this->service->export($user));
     }
 
+    public function createSystemAdmin(): void
+    {
+        $this->respondPost(fn(array $user): array => $this->service->createSystemAdmin($user, $this->request->json()));
+    }
+
+    public function deleteSystemAdmin(): void
+    {
+        $this->respondPost(fn(array $user): array => $this->service->deleteSystemAdmin($user, $this->request->json()));
+    }
+
+    public function deleteUser(): void
+    {
+        $this->respondPost(fn(array $user): array => $this->service->deleteUser($user, $this->request->json()));
+    }
+
     private function respond(callable $callback): void
     {
         $this->requireMethod('GET');
+        $this->respondWithAuthenticatedUser($callback);
+    }
 
+    private function respondPost(callable $callback): void
+    {
+        $this->requireMethod('POST');
+        $this->respondWithAuthenticatedUser($callback);
+    }
+
+    private function respondWithAuthenticatedUser(callable $callback): void
+    {
         try {
             $this->json($callback($this->auth->requireAuth($this->request)));
         } catch (HttpException $error) {

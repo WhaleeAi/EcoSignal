@@ -39,6 +39,9 @@ $router->get('/global-admin/dashboard', static fn() => Container::globalAdminCon
 $router->get('/global-admin/appeals', static fn() => Container::globalAdminController()->appeals());
 $router->get('/global-admin/audit', static fn() => Container::globalAdminController()->audit());
 $router->get('/global-admin/export', static fn() => Container::globalAdminController()->export());
+$router->post('/global-admin/system-admins', static fn() => Container::globalAdminController()->createSystemAdmin());
+$router->post('/global-admin/system-admins/delete', static fn() => Container::globalAdminController()->deleteSystemAdmin());
+$router->post('/global-admin/users/delete', static fn() => Container::globalAdminController()->deleteUser());
 
 $router->get('/ai-admin/dashboard', static fn() => Container::aiAdminController()->dashboard());
 $router->post('/ai-admin/review', static fn() => Container::aiAdminController()->review());
