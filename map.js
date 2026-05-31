@@ -1,4 +1,4 @@
-﻿;(() => {
+;(() => {
   const token = localStorage.getItem('token')
   const SIDEBAR_STORAGE_KEY = 'ecosignalSidebarExpanded'
 
@@ -323,8 +323,10 @@
   function getUserRoleLabel(role) {
     const normalized = String(role || '').toLowerCase()
     if (normalized === 'citizen' || normalized === 'user') return 'Пользователь'
-    if (normalized === 'agency') return 'Агент'
+    if (normalized === 'agency' || normalized === 'org_admin') return 'Орган надзора'
     if (normalized === 'admin') return 'Администратор'
+    if (normalized === 'global_admin') return 'Глобальный администратор'
+    if (normalized === 'ai_admin') return 'Администратор ИИ'
     return 'Пользователь'
   }
 
@@ -583,7 +585,7 @@
     if (profileModalSave) profileModalSave.disabled = true
 
     try {
-      const response = await fetch('backend/update_profile.php', {
+      const response = await fetch('api/profile', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -1229,7 +1231,7 @@
       return null
     }
 
-    const response = await fetch('backend/me.php', {
+    const response = await fetch('api/auth/me', {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -1254,7 +1256,7 @@
       return
     }
 
-    const response = await fetch('backend/categories.php', {
+    const response = await fetch('api/categories', {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -1273,7 +1275,7 @@
 
   async function loadAppeals() {
     const headers = token ? { Authorization: `Bearer ${token}` } : {}
-    const response = await fetch('backend/map_appeals.php', {
+    const response = await fetch('api/appeals/map', {
       method: 'GET',
       headers,
     })
@@ -1363,7 +1365,7 @@
         formData.append('images[]', file, file.name)
       }
 
-      const response = await fetch('backend/create_appeal.php', {
+      const response = await fetch('api/appeals', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -1386,7 +1388,7 @@
 
       if (data.ai_processing_required && appealId > 0) {
         try {
-          const aiResponse = await fetch('backend/process_appeal_ai.php', {
+          const aiResponse = await fetch('api/appeals/process-ai', {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${token}`,

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EcoSignal | Глобальный админ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@300;400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="system_admin.css" />
+  </head>
+  <body class="system-admin-page">
+    <div class="system-admin-shell">
+      <aside class="system-admin-sidebar">
+        <div class="system-admin-brand">
+          <img src="./icons/Group.svg" alt="" />
+          <span>EcoSignal</span>
+        </div>
+        <nav class="system-admin-nav">
+          <button class="is-active" type="button" data-section="overview">Аналитика</button>
+          <button type="button" data-section="appeals">Заявки</button>
+          <button type="button" data-section="audit">Аудит</button>
+        </nav>
+        <button class="system-admin-logout" id="logoutButton" type="button">Выйти</button>
+      </aside>
+      <main class="system-admin-main">
+        <header class="system-admin-header">
+          <div>
+            <h1>Глобальный админ</h1>
+            <p>Сквозная картина по заявкам, пользователям, органам и действиям в системе.</p>
+          </div>
+          <button class="system-admin-action secondary" id="exportButton" type="button">Экспорт отчета</button>
+        </header>
+
+        <section class="system-admin-section is-active" id="section-overview">
+          <div class="system-admin-grid" id="metricsGrid"></div>
+          <article class="system-admin-panel">
+            <h2>Статусы и динамика</h2>
+            <div class="system-admin-table-wrap">
+              <table class="system-admin-table">
+                <thead><tr><th>Срез</th><th>Значение</th><th>Количество</th></tr></thead>
+                <tbody id="overviewBody"></tbody>
+              </table>
+            </div>
+          </article>
+          <article class="system-admin-panel">
+            <h2>Проблемные зоны</h2>
+            <div class="system-admin-table-wrap">
+              <table class="system-admin-table">
+                <thead><tr><th>Широта</th><th>Долгота</th><th>Заявок</th></tr></thead>
+                <tbody id="zonesBody"></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section class="system-admin-section" id="section-appeals">
+          <article class="system-admin-panel">
+            <h2>Все заявки</h2>
+            <div class="system-admin-table-wrap">
+              <table class="system-admin-table">
+                <thead><tr><th>ID</th><th>Статус</th><th>Категория</th><th>Орган</th><th>Ответственный</th><th>Дата</th></tr></thead>
+                <tbody id="appealsBody"></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section class="system-admin-section" id="section-audit">
+          <article class="system-admin-panel">
+            <h2>Журнал действий</h2>
+            <div class="system-admin-table-wrap">
+              <table class="system-admin-table">
+                <thead><tr><th>Дата</th><th>Кто</th><th>Действие</th><th>Сущность</th><th>Детали</th></tr></thead>
+                <tbody id="auditBody"></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+    <script src="global_admin.js"></script>
+  </body>
+</html>

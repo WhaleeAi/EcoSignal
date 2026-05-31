@@ -1,4 +1,4 @@
-﻿;(() => {
+;(() => {
   const token = localStorage.getItem('token')
   const SIDEBAR_STORAGE_KEY = 'ecosignalSidebarExpanded'
 
@@ -146,7 +146,10 @@
   function getUserRoleLabel(role) {
     const normalized = String(role || '').toLowerCase()
     if (normalized === 'citizen' || normalized === 'user') return 'Пользователь'
-    if (normalized === 'agency') return 'Агент'
+    if (normalized === 'agency' || normalized === 'org_admin') return 'Орган надзора'
+    if (normalized === 'admin') return 'Администратор'
+    if (normalized === 'global_admin') return 'Глобальный администратор'
+    if (normalized === 'ai_admin') return 'Администратор ИИ'
     return 'Пользователь'
   }
 
@@ -369,7 +372,7 @@
     if (profileModalSave) profileModalSave.disabled = true
 
     try {
-      const response = await fetch('backend/update_profile.php', {
+      const response = await fetch('api/profile', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -1047,7 +1050,7 @@
   }
 
   async function fetchAppealDetails(appealId) {
-    const response = await fetch(`backend/user_appeal_details.php?appeal_id=${encodeURIComponent(appealId)}`, {
+    const response = await fetch(`api/appeals/${encodeURIComponent(appealId)}`, {
       method: 'GET',
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -1061,7 +1064,7 @@
   }
 
   async function sendAppealMessage(appealId, message) {
-    const response = await fetch('backend/user_appeal_message.php', {
+    const response = await fetch('api/appeals/messages', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -1228,7 +1231,7 @@
   }
 
   async function ensureUser() {
-    const response = await fetch('backend/me.php', {
+    const response = await fetch('api/auth/me', {
       method: 'GET',
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -1250,7 +1253,7 @@
   }
 
   async function loadMyAppealsPageData() {
-    const response = await fetch('backend/my_appeals.php', {
+    const response = await fetch('api/appeals/my', {
       method: 'GET',
       headers: { Authorization: `Bearer ${token}` },
     })

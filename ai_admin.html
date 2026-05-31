@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EcoSignal | Администратор ИИ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@300;400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="system_admin.css" />
+  </head>
+  <body class="system-admin-page">
+    <div class="system-admin-shell">
+      <aside class="system-admin-sidebar">
+        <div class="system-admin-brand">
+          <img src="./icons/Group.svg" alt="" />
+          <span>EcoSignal</span>
+        </div>
+        <nav class="system-admin-nav">
+          <button class="is-active" type="button" data-section="monitoring">Мониторинг</button>
+          <button type="button" data-section="review">Ручная проверка</button>
+          <button type="button" data-section="settings">Настройки</button>
+          <button type="button" data-section="logs">Логи</button>
+        </nav>
+        <button class="system-admin-logout" id="logoutButton" type="button">Выйти</button>
+      </aside>
+      <main class="system-admin-main">
+        <header class="system-admin-header">
+          <div>
+            <h1>Администратор ИИ</h1>
+            <p>Контроль AI-проверок, ручная модерация спорных решений и настройки маршрутизации.</p>
+          </div>
+          <button class="system-admin-action secondary" id="refreshButton" type="button">Обновить</button>
+        </header>
+
+        <p class="system-admin-message" id="message" aria-live="polite"></p>
+
+        <section class="system-admin-section is-active" id="section-monitoring">
+          <div class="system-admin-grid" id="metricsGrid"></div>
+          <article class="system-admin-panel">
+            <h2>Последние AI-проверки</h2>
+            <div class="system-admin-table-wrap">
+              <table class="system-admin-table">
+                <thead><tr><th>ID</th><th>Заявка</th><th>Статус</th><th>Уверенность</th><th>Причина</th><th>Дата</th></tr></thead>
+                <tbody id="runsBody"></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section class="system-admin-section" id="section-review">
+          <article class="system-admin-panel">
+            <h2>Спорные и ожидающие заявки</h2>
+            <form class="system-admin-form" id="reviewForm">
+              <label>
+                <span>ID заявки</span>
+                <input id="appealId" type="number" min="1" required />
+              </label>
+              <label>
+                <span>Решение</span>
+                <select id="decision">
+                  <option value="confirmed">Подтвердить</option>
+                  <option value="rejected">Отклонить</option>
+                  <option value="false_positive">Отметить ложное срабатывание</option>
+                </select>
+              </label>
+              <label>
+                <span>Комментарий</span>
+                <textarea id="reviewReason"></textarea>
+              </label>
+              <div class="system-admin-actions">
+                <button class="system-admin-action" type="submit">Сохранить решение</button>
+                <button class="system-admin-action secondary" id="requeueButton" type="button">Переотправить в AI</button>
+              </div>
+            </form>
+            <div class="system-admin-table-wrap">
+              <table class="system-admin-table">
+                <thead><tr><th>ID</th><th>Статус</th><th>Категория</th><th>Описание</th><th>Дата</th></tr></thead>
+                <tbody id="pendingBody"></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section class="system-admin-section" id="section-settings">
+          <article class="system-admin-panel">
+            <h2>AI-настройки</h2>
+            <form class="system-admin-form" id="settingsForm">
+              <label>
+                <span>Порог уверенности</span>
+                <input id="confidenceThreshold" type="number" min="0" max="1" step="0.01" />
+              </label>
+              <label>
+                <span>Автоназначение</span>
+                <select id="autoAssignEnabled">
+                  <option value="true">Включено</option>
+                  <option value="false">Отключено</option>
+                </select>
+              </label>
+              <label>
+                <span>Часы до зависания pending</span>
+                <input id="pendingAlertHours" type="number" min="1" step="1" />
+              </label>
+              <button class="system-admin-action" type="submit">Сохранить настройки</button>
+            </form>
+          </article>
+        </section>
+
+        <section class="system-admin-section" id="section-logs">
+          <article class="system-admin-panel">
+            <h2>storage/ai_errors.log</h2>
+            <pre class="system-admin-log" id="errorLog"></pre>
+          </article>
+        </section>
+      </main>
+    </div>
+    <script src="ai_admin.js"></script>
+  </body>
+</html>

@@ -225,7 +225,7 @@
   }
 
   async function loadDashboard() {
-    const response = await fetch('backend/superadmin_dashboard.php', {
+    const response = await fetch('api/superadmin/dashboard', {
       method: 'GET',
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -264,7 +264,7 @@
     if (saveAdminButton) saveAdminButton.disabled = true
 
     try {
-      const response = await fetch('backend/superadmin_dashboard.php', {
+      const response = await fetch('api/superadmin/dashboard', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

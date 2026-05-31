@@ -740,7 +740,7 @@
   }
 
   async function ensureAgent() {
-    const response = await fetch('backend/me.php', {
+    const response = await fetch('api/auth/me', {
       method: 'GET',
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -762,7 +762,7 @@
   }
 
   async function fetchMyAppeals() {
-    const response = await fetch('backend/agent_my_appeals.php', {
+    const response = await fetch('api/agent/appeals', {
       method: 'GET',
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -788,7 +788,7 @@
   }
 
   async function fetchAppealDetails(appealId) {
-    const response = await fetch(`backend/agent_appeal_details.php?appeal_id=${encodeURIComponent(appealId)}`, {
+    const response = await fetch(`api/agent/appeals/${encodeURIComponent(appealId)}`, {
       method: 'GET',
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -802,7 +802,7 @@
   }
 
   async function updateAppeal(appealId, status, feedback) {
-    const response = await fetch('backend/agent_update_appeal.php', {
+    const response = await fetch('api/agent/appeals/update', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -973,7 +973,7 @@
   function fillProfileModal(user) {
     const profile = user && typeof user === 'object' ? user : {}
     const displayName = getUserDisplayName(profile)
-    const usesOrgAdminAuth = String(profile.auth_source || '') === 'org_admins'
+    const usesOrgAdminAuth = String(profile.role || '') === 'admin' && String(profile.auth_source || '') === 'org_admins'
     if (profileFullName) {
       profileFullName.value = displayName === 'Агент' ? '' : displayName
       profileFullName.readOnly = usesOrgAdminAuth
@@ -1060,7 +1060,7 @@
     if (profileModalSave) profileModalSave.disabled = true
 
     try {
-      const response = await fetch('backend/update_profile.php', {
+      const response = await fetch('api/profile', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

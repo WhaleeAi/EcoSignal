@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ru">
 	<head>
 		<meta charset="UTF-8" />
@@ -313,12 +313,20 @@
 				const userRole = user?.role
 				const authSource = user?.auth_source
 
-				if (userRole === 'superadmin' && authSource === 'superadmins') {
+				if (userRole === 'superadmin' && authSource === 'system_admins') {
 					return 'superadmin.html'
 				}
 
-				if (userRole === 'admin') {
-					return authSource === 'org_admins' ? 'agent.html' : 'map.html'
+				if (userRole === 'global_admin' && authSource === 'system_admins') {
+					return 'global_admin.html'
+				}
+
+				if (userRole === 'ai_admin' && authSource === 'system_admins') {
+					return 'ai_admin.html'
+				}
+
+				if (userRole === 'admin' && authSource === 'org_admins') {
+					return 'agent.html'
 				}
 
 				return 'map.html'
@@ -336,7 +344,7 @@
 				}
 
 				try {
-					const response = await fetch('backend/me.php', {
+					const response = await fetch('api/auth/me', {
 						method: 'GET',
 						headers: {
 							Authorization: `Bearer ${token}`,

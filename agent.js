@@ -646,7 +646,7 @@
   function fillProfileModal(user) {
     const profile = user && typeof user === 'object' ? user : {}
     const displayName = getUserDisplayName(profile)
-    const usesOrgAdminAuth = String(profile.auth_source || '') === 'org_admins'
+    const usesOrgAdminAuth = String(profile.role || '') === 'admin' && String(profile.auth_source || '') === 'org_admins'
     if (profileFullName) {
       profileFullName.value = displayName === 'Агент' ? '' : displayName
       profileFullName.readOnly = false
@@ -733,7 +733,7 @@
     if (profileModalSave) profileModalSave.disabled = true
 
     try {
-      const response = await fetch('backend/update_profile.php', {
+      const response = await fetch('api/profile', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -880,7 +880,7 @@
   }
 
   async function ensureAgent() {
-    const response = await fetch('backend/me.php', {
+    const response = await fetch('api/auth/me', {
       method: 'GET',
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -904,7 +904,7 @@
   }
 
   async function loadDashboard() {
-    const response = await fetch('backend/agent_dashboard.php', {
+    const response = await fetch('api/agent/dashboard', {
       method: 'GET',
       headers: { Authorization: `Bearer ${token}` },
     })
