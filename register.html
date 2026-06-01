@@ -40,18 +40,8 @@
 
 						<div class="register-card">
 							<form class="register-form" id="registerForm" autocomplete="off">
-								<input
-									id="fullname"
-									name="fullname"
-									type="text"
-									placeholder="ФИО"
-								/>
-								<input
-									id="email"
-									name="email"
-									type="email"
-									placeholder="Введите email"
-								/>
+								<input id="fullname" name="fullname" type="text" placeholder="ФИО" required />
+								<input id="email" name="email" type="email" placeholder="Введите email" required />
 								<input
 									id="password"
 									name="new_password"
@@ -60,103 +50,32 @@
 									data-lpignore="true"
 									data-1p-ignore="true"
 									placeholder="Создайте пароль"
+									required
 								/>
 
-								<div class="role-dropdown" data-dropdown>
-									<input type="hidden" id="role" name="role" value="" />
-									<button
-										class="role-trigger"
-										type="button"
-										data-trigger
-										aria-haspopup="listbox"
-										aria-expanded="false"
-									>
-										<span data-label>Выберите роль</span>
-										<span class="role-caret" aria-hidden="true"></span>
-									</button>
-									<div class="role-menu" data-menu role="listbox">
-										<button
-											type="button"
-											class="role-option"
-											data-value="citizen"
-										>
-											Гражданин
-										</button>
-										<button
-											hidden
-											type="button"
-											class="role-option"
-											data-value="citizen"
-										>
-											Орган надзора
-										</button>
-									</div>
-								</div>
+								<label class="register-consent">
+									<input id="personalDataConsent" type="checkbox" required />
+									<span>
+										Я даю согласие на обработку персональных данных и ознакомлен(а) с
+										<a href="privacy.html" target="_blank" rel="noopener">политикой обработки персональных данных</a>.
+									</span>
+								</label>
 
-								<button type="submit" class="submit-btn">Продолжить</button>
+								<button type="submit" class="submit-btn" id="registerSubmit" disabled>Продолжить</button>
 							</form>
 
 							<p id="message"></p>
-							<p class="register-note">
-								Нажимая «Продолжить», вы принимаете условия использования
-								сервиса EcoSignal.
-							</p>
 						</div>
 					</div>
 				</section>
 
 				<aside class="register-right">
-					<img
-						class="register-illustration"
-						src="imgs/reg_illustration.png"
-						alt="Иллюстрация регистрации"
-					/>
+					<img class="register-illustration" src="imgs/reg_illustration.png" alt="Иллюстрация регистрации" />
 				</aside>
 			</section>
 		</main>
 
 		<script>
-			;(() => {
-				const dropdown = document.querySelector('[data-dropdown]')
-				if (!dropdown) return
-
-				const trigger = dropdown.querySelector('[data-trigger]')
-				const menu = dropdown.querySelector('[data-menu]')
-				const label = dropdown.querySelector('[data-label]')
-				const hidden = dropdown.querySelector("input[type='hidden']")
-				const options = dropdown.querySelectorAll('.role-option')
-
-				const close = () => {
-					dropdown.classList.remove('open')
-					trigger.setAttribute('aria-expanded', 'false')
-				}
-
-				const open = () => {
-					dropdown.classList.add('open')
-					trigger.setAttribute('aria-expanded', 'true')
-				}
-
-				trigger.addEventListener('click', () => {
-					dropdown.classList.contains('open') ? close() : open()
-				})
-
-				options.forEach(option => {
-					option.addEventListener('click', () => {
-						hidden.value = option.dataset.value || ''
-						label.textContent = option.textContent || 'Выберите роль'
-						close()
-					})
-				})
-
-				document.addEventListener('click', event => {
-					if (!dropdown.contains(event.target)) close()
-				})
-
-				document.addEventListener('keydown', event => {
-					if (event.key === 'Escape') close()
-				})
-			})()
-
 			function getDashboardUrl(user) {
 				const userRole = user?.role
 				const authSource = user?.auth_source
@@ -210,65 +129,77 @@
 			syncHeaderAuthAction()
 
 			const passwordInput = document.getElementById('password')
+			const consentInput = document.getElementById('personalDataConsent')
+			const submitButton = document.getElementById('registerSubmit')
+
 			const clearPasswordInput = () => {
 				if (passwordInput) passwordInput.value = ''
 			}
 
+			const syncSubmitState = () => {
+				submitButton.disabled = !consentInput.checked
+			}
+
 			clearPasswordInput()
+			syncSubmitState()
+			consentInput.addEventListener('change', syncSubmitState)
 			window.addEventListener('pageshow', clearPasswordInput)
 			window.setTimeout(clearPasswordInput, 250)
 
-			document
-				.getElementById('registerForm')
-				.addEventListener('submit', async event => {
-					event.preventDefault()
+			document.getElementById('registerForm').addEventListener('submit', async event => {
+				event.preventDefault()
 
-					const fullname = document.getElementById('fullname').value.trim()
-					const email = document.getElementById('email').value.trim()
-					const password = document.getElementById('password').value.trim()
-					const role = document.getElementById('role').value.trim()
-					const messageEl = document.getElementById('message')
+				const fullname = document.getElementById('fullname').value.trim()
+				const email = document.getElementById('email').value.trim()
+				const password = document.getElementById('password').value.trim()
+				const role = 'citizen'
+				const messageEl = document.getElementById('message')
 
-					try {
-						const response = await fetch('api/auth/register', {
-							method: 'POST',
-							headers: {
-								'Content-Type': 'application/json',
-							},
-							body: JSON.stringify({ fullname, email, password, role }),
-						})
+				if (!consentInput.checked) {
+					messageEl.textContent = 'Для регистрации необходимо согласие на обработку персональных данных'
+					return
+				}
 
-						const data = await response.json()
+				try {
+					const response = await fetch('api/auth/register', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+						},
+						body: JSON.stringify({ fullname, email, password, role }),
+					})
 
-						if (!response.ok) {
-							messageEl.textContent = data.message || 'Ошибка регистрации'
-							return
-						}
+					const data = await response.json()
 
-						messageEl.textContent = data.message
-
-						if (data?.requires_approval) {
-							localStorage.removeItem('token')
-							localStorage.removeItem('user')
-							setTimeout(() => {
-								window.location.href = 'login.html'
-							}, 1400)
-							return
-						}
-
-						localStorage.setItem('token', data.token)
-						localStorage.setItem('user', JSON.stringify(data.user))
-
-						const userRole = data?.user?.role
-						const authSource = data?.user?.auth_source
-						const nextPage = getDashboardUrl({ role: userRole, auth_source: authSource })
-						setTimeout(() => {
-							window.location.href = nextPage
-						}, 1000)
-					} catch (error) {
-						messageEl.textContent = 'Ошибка соединения с сервером'
+					if (!response.ok) {
+						messageEl.textContent = data.message || 'Ошибка регистрации'
+						return
 					}
-				})
+
+					messageEl.textContent = data.message
+
+					if (data?.requires_approval) {
+						localStorage.removeItem('token')
+						localStorage.removeItem('user')
+						setTimeout(() => {
+							window.location.href = 'login.html'
+						}, 1400)
+						return
+					}
+
+					localStorage.setItem('token', data.token)
+					localStorage.setItem('user', JSON.stringify(data.user))
+
+					const userRole = data?.user?.role
+					const authSource = data?.user?.auth_source
+					const nextPage = getDashboardUrl({ role: userRole, auth_source: authSource })
+					setTimeout(() => {
+						window.location.href = nextPage
+					}, 1000)
+				} catch (error) {
+					messageEl.textContent = 'Ошибка соединения с сервером'
+				}
+			})
 		</script>
 	</body>
 </html>
